@@ -14,7 +14,12 @@ Requires PHP 8.2+ with `ext-sodium`, and Laravel 10, 11, 12 or 13.
 composer require mazaya/license-client
 php artisan migrate
 php artisan license:activate LK_live_xxxxxxxx --label=production
+php artisan license:install-scheduler
+php artisan license:doctor          # confirms the install is correct
 ```
+
+`license:doctor` exits non-zero when something needs fixing, so a deployment
+script can refuse to finish on a half-configured install.
 
 `.env`:
 
@@ -98,6 +103,7 @@ php artisan license:install-scheduler --print
 | `license:offline-apply` | Apply a `.lic` file issued by hand |
 | `license:reseal` | Adopt a deliberate configuration change |
 | `license:install-scheduler` | Install the cron entry the scheduler needs |
+| `license:doctor` | Check the install is correct and will stay licensed |
 
 ## What it sends
 

@@ -5,6 +5,25 @@ All notable changes to `mazaya/license-client`.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-09-10
+
+### Added
+
+- **`license:doctor`** — one command that says whether an installation was set
+  up correctly and will stay that way. "Follow the instructions" is not
+  verifiable, and every way an install goes wrong is silent: the wrong public
+  key, a forgotten activation, a scheduler nobody set up, a firewall that was
+  never opened. Each looks fine on the day and fails weeks later at the
+  customer's site.
+
+  It checks the environment, the configuration, the activation and its state,
+  that the package is actually loaded, that the licence service is reachable,
+  and that a heartbeat has run recently — then exits non-zero if anything needs
+  fixing, so it can gate a deployment script.
+
+  Verified against each of those four failures: it catches all of them and
+  names the remedy.
+
 ## [1.4.0] - 2026-09-10
 
 The heartbeat now runs on its own after an ordinary install, instead of quietly

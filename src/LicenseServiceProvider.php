@@ -14,6 +14,7 @@ use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Mazaya\License\Console\ActivateCommand;
+use Mazaya\License\Console\DoctorCommand;
 use Mazaya\License\Console\HeartbeatCommand;
 use Mazaya\License\Console\OfflineApplyCommand;
 use Mazaya\License\Console\InstallSchedulerCommand;
@@ -106,6 +107,7 @@ class LicenseServiceProvider extends ServiceProvider
                 OfflineApplyCommand::class,
                 ResealCommand::class,
                 InstallSchedulerCommand::class,
+                DoctorCommand::class,
             ]);
 
             $this->publishes([
