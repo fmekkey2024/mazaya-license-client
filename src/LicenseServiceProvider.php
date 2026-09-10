@@ -4,20 +4,26 @@ declare(strict_types=1);
 
 namespace Mazaya\License;
 
+use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Http\Client\Factory as Http;
 use Illuminate\Routing\Router;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Mazaya\License\Console\ActivateCommand;
 use Mazaya\License\Console\HeartbeatCommand;
 use Mazaya\License\Console\OfflineApplyCommand;
 use Mazaya\License\Console\OfflineRequestCommand;
+use Mazaya\License\Console\ResealCommand;
 use Mazaya\License\Console\StatusCommand;
 use Mazaya\License\Fingerprint\Collector;
 use Mazaya\License\Guard\Gate;
+use Mazaya\License\Guard\Seal;
 use Mazaya\License\Http\Middleware\EnforceLicense;
+use Mazaya\License\Http\Middleware\HaltIfUnlicensed;
 use Mazaya\License\Storage\ClockGuard;
 use Mazaya\License\Storage\StateStore;
 use Mazaya\License\Token\Verifier;
@@ -44,11 +50,14 @@ class LicenseServiceProvider extends ServiceProvider
 
         $this->app->singleton(Collector::class);
 
+        $this->app->singleton(Seal::class, fn ($app): Seal => new Seal($app->make(Config::class)));
+
         $this->app->singleton(Gate::class, fn ($app): Gate => new Gate(
             $app->make(StateStore::class),
             $app->make(Verifier::class),
             $app->make(ClockGuard::class),
             $app->make(Collector::class),
+            $app->make(Seal::class),
             $app->make(Cache::class),
             $app->make(Config::class),
         ));
@@ -60,6 +69,7 @@ class LicenseServiceProvider extends ServiceProvider
 
         $this->app->singleton(LicenseManager::class, fn ($app): LicenseManager => new LicenseManager(
             $app->make(Gate::class),
+            $app->make(Seal::class),
             $app->make(StateStore::class),
             $app->make(Verifier::class),
             $app->make(Collector::class),
@@ -76,6 +86,8 @@ class LicenseServiceProvider extends ServiceProvider
 
         $router->aliasMiddleware('license', EnforceLicense::class);
 
+        $this->enforceGlobally();
+
         if ($this->app->runningInConsole()) {
             $this->commands([
                 ActivateCommand::class,
@@ -83,6 +95,7 @@ class LicenseServiceProvider extends ServiceProvider
                 StatusCommand::class,
                 OfflineRequestCommand::class,
                 OfflineApplyCommand::class,
+                ResealCommand::class,
             ]);
 
             $this->publishes([
@@ -91,6 +104,75 @@ class LicenseServiceProvider extends ServiceProvider
 
             $this->scheduleHeartbeat();
         }
+    }
+
+    /**
+     * Attach enforcement to everything, from inside the package.
+     *
+     * The route-level `license` middleware is opt-in and therefore opt-out —
+     * whoever attaches it can detach it. This one is prepended to the global
+     * stack by the package itself, so the only way past it is to remove the
+     * package, which stops the application booting at all.
+     */
+    private function enforceGlobally(): void
+    {
+        // Registered unconditionally. Gating registration on the configured
+        // mode would put the decision back in the file being tampered with;
+        // the guard itself asks the gate and a genuine hosted install falls
+        // through it in microseconds.
+        if (! $this->app->runningInConsole()) {
+            $this->app->booted(function (): void {
+                $this->app->make(Kernel::class)->prependMiddleware(HaltIfUnlicensed::class);
+            });
+
+            return;
+        }
+
+        $this->guardConsole();
+    }
+
+    /**
+     * Console commands are gated too, or an unlicensed system is still fully
+     * operable through artisan and the queue.
+     *
+     * The exceptions are the commands needed to *fix* a licensing problem. Omit
+     * them and a customer whose licence has genuinely lapsed has no way back —
+     * which would be a support disaster, not a stronger licence.
+     */
+    private function guardConsole(): void
+    {
+        Event::listen(CommandStarting::class, function (CommandStarting $event): void {
+            $command = (string) $event->command;
+
+            if ($command === '' || $this->isRecoveryCommand($command)) {
+                return;
+            }
+
+            $gate = $this->app->make(Gate::class);
+
+            if (! $gate->isEnforcing() || $gate->state()->isUsable()) {
+                return;
+            }
+
+            $event->output->writeln('<error>This system is not licensed. Run: php artisan license:status</error>');
+
+            exit(1);
+        });
+    }
+
+    private function isRecoveryCommand(string $command): bool
+    {
+        foreach ([
+            'license:', 'migrate', 'config:', 'cache:', 'optimize', 'view:', 'route:', 'event:',
+            'package:discover', 'vendor:publish', 'storage:link', 'key:generate',
+            'about', 'list', 'help', 'env', 'schedule:run', 'schedule:work', 'down', 'up',
+        ] as $prefix) {
+            if ($command === $prefix || str_starts_with($command, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

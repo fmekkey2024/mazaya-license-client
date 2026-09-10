@@ -29,6 +29,13 @@ enum LicenseState: string
     /** A license is present but does not verify, or is not for this install. */
     case Invalid = 'invalid';
 
+    /**
+     * The licensing configuration has been edited since activation, or the
+     * local state has been partially removed. Distinct from Invalid because it
+     * is never an accident.
+     */
+    case Tampered = 'tampered';
+
     public function isUsable(): bool
     {
         return in_array($this, [self::Active, self::Expiring, self::Grace], true);
@@ -58,6 +65,7 @@ enum LicenseState: string
             self::Expired    => 'This system is not licensed',
             self::Unlicensed => 'This system has not been activated',
             self::Invalid    => 'This system\'s license could not be verified',
+            self::Tampered   => 'This system\'s licensing configuration has been altered',
         };
     }
 }

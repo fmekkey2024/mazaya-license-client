@@ -8,6 +8,7 @@ use Illuminate\Contracts\Config\Repository as Config;
 use Mazaya\License\Enums\LicenseState;
 use Mazaya\License\Fingerprint\Collector;
 use Mazaya\License\Guard\Gate;
+use Mazaya\License\Guard\Seal;
 use Mazaya\License\Storage\ClockGuard;
 use Mazaya\License\Storage\StateStore;
 use Mazaya\License\Token\Verifier;
@@ -23,6 +24,7 @@ final class LicenseManager
 {
     public function __construct(
         private readonly Gate $gate,
+        private readonly Seal $seal,
         private readonly StateStore $store,
         private readonly Verifier $verifier,
         private readonly Collector $fingerprints,
@@ -106,6 +108,11 @@ final class LicenseManager
         }
 
         $this->store->credentials($response['install_id'], $response['license_secret']);
+
+        // Bind the licence to the configuration it was activated against, so a
+        // later edit to .env invalidates it.
+        $this->store->sealWith($this->seal->compute($response['install_id'], $response['license_secret']));
+
         $this->applyToken($response['license']);
         $this->store->recordHeartbeat($response['status'] ?? 'active', $response['message'] ?? null);
         $this->gate->flush();
@@ -153,6 +160,29 @@ final class LicenseManager
         return $response;
     }
 
+    /**
+     * Re-bind the licence to the current configuration.
+     *
+     * A deliberate, legitimate change — moving the licence server, rotating a
+     * key — has to be adoptable, or the only way out of one would be a full
+     * re-activation. Deliberately not automatic: it is an explicit command an
+     * operator runs, and it is recorded on the next heartbeat.
+     */
+    public function reseal(): bool
+    {
+        $installId = $this->store->installId();
+        $secret    = $this->store->secret();
+
+        if ($installId === null || $secret === null) {
+            return false;
+        }
+
+        $this->store->sealWith($this->seal->compute($installId, $secret));
+        $this->gate->flush();
+
+        return true;
+    }
+
     /** Produces the request file for the air-gapped path. */
     public function offlineRequest(): string
     {
@@ -187,6 +217,7 @@ final class LicenseManager
 
         if ($credentials !== null) {
             $this->store->credentials($credentials['install_id'], $credentials['license_secret']);
+            $this->store->sealWith($this->seal->compute($credentials['install_id'], $credentials['license_secret']));
         }
 
         if (! $this->applyToken($token)) {

@@ -5,6 +5,56 @@ All notable changes to `mazaya/license-client`.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-09-10
+
+Removing the licensing now stops the system rather than freeing it. Verified
+against 30 tamper scenarios on a live installation.
+
+### Added
+
+- **Configuration seal.** On activation the licence is bound to the settings it
+  was issued against — mode, product, licence server, enforcement policy and
+  signing keys — with a digest keyed by the per-installation secret. Editing any
+  of them in `.env` invalidates the licence instead of changing behaviour, which
+  closes the cheapest bypass in the system: `LICENSE_MODE=hosted`.
+- **`license:reseal`** adopts a deliberate configuration change (a moved licence
+  server, a rotated key) without a full re-activation.
+- **Global enforcement.** A halt guard is prepended to the middleware stack by
+  the package itself, so enforcement no longer depends on `license` being
+  attached to a route group, and cannot be lifted by editing routes.
+- **Console guard.** Artisan commands and queue workers are refused on an
+  unlicensed installation, except the ones needed to recover: `license:*`,
+  `migrate`, cache and config commands, and `schedule:run`.
+- New `tampered` state, distinct from `invalid` because it is never an accident.
+
+### Changed
+
+- Enforcement is now **fail-closed**. Any error while deciding is treated as
+  unlicensed. This is a deliberate reversal: a fault in licensing code will now
+  take a customer down, which is the cost of guaranteeing that removing the
+  licensing cannot leave the system running.
+- Whether an installation is under enforcement is decided by **stored state**,
+  not by `config('license.mode')`. A stored activation is proof this copy was
+  licensed as on-premise, and no later edit to a file the customer owns can
+  unsay it.
+- An installation that was activated and whose licence has since been removed
+  reads as `tampered`, not `unlicensed`. A never-activated install still reads
+  as `unlicensed` and keeps the read-only concession.
+- Tampering does not get the read-only concession — there is no honest reading
+  of an edited configuration.
+
+### Notes
+
+Removing the package stops the application booting (HTTP 500), because Laravel
+cannot resolve the missing service provider. That is the intended outcome, not a
+crash to be handled.
+
+This raises the cost of a bypass from one line to a deliberate, multi-file edit
+by someone who understands what they are removing — and every one of those
+routes stops the heartbeat, which surfaces on the vendor's dashboard within 48
+hours. It is not, and cannot be, absolute: PHP source on a machine the customer
+controls is always editable. Only a bytecode encoder changes that.
+
 ## [1.0.0] - 2026-09-10
 
 First release. Verified end to end against the live Mazaya License Service from a

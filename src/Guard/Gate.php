@@ -9,6 +9,7 @@ use Illuminate\Contracts\Cache\Repository as Cache;
 use Mazaya\License\Enums\LicenseState;
 use Mazaya\License\Exceptions\InvalidLicense;
 use Mazaya\License\Fingerprint\Collector;
+use Mazaya\License\Guard\Seal;
 use Mazaya\License\Storage\ClockGuard;
 use Mazaya\License\Storage\StateStore;
 use Mazaya\License\Token\Verifier;
@@ -34,9 +35,25 @@ final class Gate
         private readonly Verifier $verifier,
         private readonly ClockGuard $clock,
         private readonly Collector $fingerprints,
+        private readonly Seal $seal,
         private readonly Cache $cache,
         private readonly Config $config,
     ) {}
+
+    /**
+     * Whether this installation is under enforcement.
+     *
+     * Deliberately not read from config alone. `LICENSE_MODE=hosted` is a
+     * one-word edit in a file the customer owns, and if that were the only
+     * question asked it would switch enforcement off entirely — the cheapest
+     * bypass in the system. A stored activation is proof this copy was licensed
+     * as on-premise, and no later edit can unsay it.
+     */
+    public function isEnforcing(): bool
+    {
+        return $this->config->get('license.mode') === 'onprem'
+            || $this->store->installId() !== null;
+    }
 
     public function state(): LicenseState
     {
@@ -58,6 +75,12 @@ final class Gate
      */
     public function allowsReads(): bool
     {
+        // There is no honest reading of an edited configuration, so tampering
+        // is the one state the read-only concession does not extend to.
+        if ($this->state() === LicenseState::Tampered) {
+            return false;
+        }
+
         return $this->state()->isUsable()
             || $this->config->get('license.enforcement', 'readonly') === 'readonly';
     }
@@ -116,7 +139,7 @@ final class Gate
             return;
         }
 
-        if ($this->config->get('license.mode') !== 'onprem') {
+        if (! $this->isEnforcing()) {
             $this->memoised = LicenseState::Active;
 
             return;
@@ -176,7 +199,19 @@ final class Gate
         $token = $this->store->token();
 
         if ($token === null) {
-            return LicenseState::Unlicensed;
+            // Never activated is an honest fresh install and keeps the
+            // read-only concession. An install that *was* activated and whose
+            // licence has since been removed is not the same thing.
+            return $this->store->installId() === null
+                ? LicenseState::Unlicensed
+                : LicenseState::Tampered;
+        }
+
+        // Checked before the token itself: an edited .env or a half-deleted
+        // state is not a licensing question, it is a tampering one, and the two
+        // deserve different answers.
+        if (! $this->sealIntact()) {
+            return LicenseState::Tampered;
         }
 
         try {
@@ -216,6 +251,25 @@ final class Gate
             $now <= $graceEnd => LicenseState::Grace,
             default           => LicenseState::Expired,
         };
+    }
+
+    /**
+     * The licence must still match the configuration it was issued against.
+     *
+     * A licence present without a seal counts as tampering too — that is what
+     * deleting the column, or restoring an old backup of it, looks like.
+     */
+    private function sealIntact(): bool
+    {
+        $installId = $this->store->installId();
+        $secret    = $this->store->secret();
+        $seal      = $this->store->seal();
+
+        if ($installId === null || $secret === null || $seal === null) {
+            return false;
+        }
+
+        return $this->seal->matches($seal, $installId, $secret);
     }
 
     /** @param array<string, string> $signed */

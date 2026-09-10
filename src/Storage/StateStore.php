@@ -64,6 +64,13 @@ final class StateStore
         return $secret !== null ? (string) $secret : null;
     }
 
+    public function seal(): ?string
+    {
+        $seal = $this->row()['seal'] ?? $this->readFile()['seal'] ?? null;
+
+        return $seal !== null ? (string) $seal : null;
+    }
+
     public function lastStatus(): ?string
     {
         return $this->row()['last_status'] ?? null;
@@ -99,6 +106,11 @@ final class StateStore
     public function credentials(string $installId, string $secret): void
     {
         $this->put(['install_id' => $installId, 'secret' => $secret]);
+    }
+
+    public function sealWith(string $seal): void
+    {
+        $this->put(['seal' => $seal]);
     }
 
     /**

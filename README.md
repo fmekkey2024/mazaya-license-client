@@ -30,11 +30,34 @@ codebase serves our own SaaS tenants unchanged.
 
 ## Enforce
 
+Nothing to wire up. The package prepends its own guard to the global middleware
+stack, so every route is covered from the moment it is installed.
+
+The `license` route middleware is still available if you want a per-route
+read-only policy on top:
+
 ```php
 Route::middleware(['web', 'license'])->group(/* ... */);
 ```
 
 `@include('license::banner')` in your layout renders the warning states.
+
+## Tamper resistance
+
+On activation the licence is sealed to the configuration it was issued against —
+mode, product, server, enforcement and signing keys. Editing any of them in
+`.env` invalidates the licence rather than changing behaviour, so
+`LICENSE_MODE=hosted` stops a licensed installation instead of freeing it.
+
+After a change you made **on purpose** — a moved licence server, a rotated key —
+adopt it with:
+
+```bash
+php artisan license:reseal
+```
+
+Enforcement is fail-closed: an error while deciding is treated as unlicensed,
+and removing the package stops the application booting.
 
 ## Commands
 
@@ -45,6 +68,7 @@ Route::middleware(['web', 'license'])->group(/* ... */);
 | `license:status` | What state this install is in, and why |
 | `license:offline-request` | Produce a `.lreq` file when the network is unavailable |
 | `license:offline-apply` | Apply a `.lic` file issued by hand |
+| `license:reseal` | Adopt a deliberate configuration change |
 
 ## What it sends
 
