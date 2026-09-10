@@ -69,9 +69,27 @@ class DoctorCommand extends Command
         );
 
         if ($activated) {
-            $days = $license->daysRemaining();
-            $this->check('More than 7 days remaining'.($days === null ? '' : " ({$days})"),
-                $days !== null && $days > 7, 'the licence is close to expiry or already past it');
+            // Compared against the renewal interval, not a fixed number of days.
+            //
+            // What this reports is the life of the current *token*, which is
+            // capped by the licence's TTL — an installation on a 5-day TTL never
+            // has more than 5 days on it and is perfectly healthy. Comparing
+            // that to a fixed week reported a problem on every short-TTL licence
+            // and none of them were real.
+            //
+            // The client cannot see the subscription end date at all; the
+            // server caps each token at it. So the only thing worth asking here
+            // is whether the token outlasts the next couple of renewal attempts.
+            $days     = $license->daysRemaining();
+            $interval = max(1, (int) config('license.heartbeat_hours', 6));
+            $needed   = ($interval * 2) / 24;
+
+            $this->check(
+                'The current token outlasts the next renewals'
+                    .($days === null ? '' : " ({$days}d left, renews every {$interval}h)"),
+                $days !== null && $days >= $needed,
+                'renewal is not keeping up — the licence may be suspended, or the server unreachable'
+            );
         }
 
         $this->section('Enforcement');

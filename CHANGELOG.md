@@ -5,6 +5,25 @@ All notable changes to `mazaya/license-client`.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-09-10
+
+Both fixes come from rehearsing a real install end to end, on a licence with a
+five-day TTL — a shape no earlier test had used.
+
+### Fixed
+
+- **The warning window is now derived from the token's own life**, capped at
+  half of it. A licence issued with a five-day TTL sits permanently inside a
+  seven-day warning window, so the banner never went away — and a warning that
+  is always on is one nobody reads.
+- **`license:doctor` no longer reports a problem on every short-TTL licence.**
+  It was comparing the current token's remaining life against a fixed seven
+  days, but that number is capped by the TTL: a five-day licence never has more
+  than five days on it and is perfectly healthy. It now asks whether the token
+  outlasts the next couple of renewal attempts, which is the thing that actually
+  matters. The client cannot see the subscription end date at all — the server
+  caps each token at it — so it was never a question the client could answer.
+
 ## [1.5.0] - 2026-09-10
 
 ### Added

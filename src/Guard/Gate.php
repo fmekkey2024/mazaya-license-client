@@ -243,7 +243,16 @@ final class Gate
         $now      = time();
         $expiry   = (int) ($payload['exp'] ?? 0);
         $graceEnd = $expiry + ((int) ($payload['grace_days'] ?? 0) * 86400);
-        $warnFrom = $expiry - ((int) $this->config->get('license.warn_days', 7) * 86400);
+
+        // The warning window is capped at half the token's own life.
+        //
+        // A licence issued with a five-day TTL is *always* inside a seven-day
+        // warning window, so the banner would never go away — and a warning
+        // that is permanently on is one nobody reads. Deriving it from the
+        // token's own lifetime keeps "expiring soon" meaningful at any TTL.
+        $tokenLife = max(1, $expiry - (int) ($payload['iat'] ?? $expiry));
+        $warnFor   = min((int) $this->config->get('license.warn_days', 7) * 86400, intdiv($tokenLife, 2));
+        $warnFrom  = $expiry - $warnFor;
 
         return match (true) {
             $now <= $warnFrom => LicenseState::Active,
