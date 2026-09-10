@@ -71,6 +71,19 @@ return [
     */
     'heartbeat_hours' => (int) env('LICENSE_HEARTBEAT_HOURS', 6),
 
+    /*
+    |---------------------------------------------------------------------------
+    | Renew from web traffic
+    |---------------------------------------------------------------------------
+    | Laravel's scheduler only runs if the operating system calls schedule:run
+    | every minute, and that line is the most commonly missed step of an
+    | on-premise install. With this on, any request can renew the licence after
+    | its response has been sent — so a system that serves traffic keeps itself
+    | licensed whether or not cron was ever set up. One attempt per interval,
+    | never on the visitor's clock.
+    */
+    'renew_on_request' => env('LICENSE_RENEW_ON_REQUEST', true),
+
     // Seconds the evaluated state is cached. The verification itself costs
     // ~0.09ms; this exists to avoid a database read on every request.
     'cache_ttl' => (int) env('LICENSE_CACHE_TTL', 60),

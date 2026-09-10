@@ -56,8 +56,41 @@ class StatusCommand extends Command
             ));
         }
 
+        $this->warnIfSchedulerIsNotRunning($license);
+
         $this->newLine();
 
         return $state->isUsable() ? self::SUCCESS : self::FAILURE;
+    }
+
+    /**
+     * The single most common way an on-premise install dies quietly.
+     *
+     * The package schedules its own heartbeat, but Laravel's scheduler only
+     * runs if the operating system is calling `schedule:run` every minute. Miss
+     * that one cron line and nothing renews: everything looks healthy for weeks
+     * and then the licence lapses for no visible reason.
+     */
+    private function warnIfSchedulerIsNotRunning(LicenseManager $license): void
+    {
+        $last = $license->lastHeartbeatAt();
+
+        if ($license->installId() === null || $last === null) {
+            return;   // never activated; nothing to renew yet
+        }
+
+        $interval = max(1, (int) config('license.heartbeat_hours', 6));
+        $stale    = strtotime($last) < time() - ($interval * 2 * 3600);
+
+        if (! $stale) {
+            return;
+        }
+
+        $this->newLine();
+        $this->warn('  The last heartbeat is older than two scheduled runs.');
+        $this->line('  Either this server cannot reach the licence service, or the scheduler is not running.');
+        $this->line('  The scheduler needs one line in cron:');
+        $this->newLine();
+        $this->line('    * * * * * cd '.base_path().' && php artisan schedule:run >> /dev/null 2>&1');
     }
 }

@@ -16,6 +16,7 @@ use Illuminate\Support\ServiceProvider;
 use Mazaya\License\Console\ActivateCommand;
 use Mazaya\License\Console\HeartbeatCommand;
 use Mazaya\License\Console\OfflineApplyCommand;
+use Mazaya\License\Console\InstallSchedulerCommand;
 use Mazaya\License\Console\OfflineRequestCommand;
 use Mazaya\License\Console\ResealCommand;
 use Mazaya\License\Console\StatusCommand;
@@ -25,6 +26,7 @@ use Mazaya\License\Guard\Integrity;
 use Mazaya\License\Guard\Seal;
 use Mazaya\License\Http\Middleware\EnforceLicense;
 use Mazaya\License\Http\Middleware\HaltIfUnlicensed;
+use Mazaya\License\Http\Middleware\RenewLicense;
 use Mazaya\License\Storage\ClockGuard;
 use Mazaya\License\Storage\StateStore;
 use Mazaya\License\Token\Verifier;
@@ -103,6 +105,7 @@ class LicenseServiceProvider extends ServiceProvider
                 OfflineRequestCommand::class,
                 OfflineApplyCommand::class,
                 ResealCommand::class,
+                InstallSchedulerCommand::class,
             ]);
 
             $this->publishes([
@@ -129,7 +132,14 @@ class LicenseServiceProvider extends ServiceProvider
         // through it in microseconds.
         if (! $this->app->runningInConsole()) {
             $this->app->booted(function (): void {
-                $this->app->make(Kernel::class)->prependMiddleware(HaltIfUnlicensed::class);
+                $kernel = $this->app->make(Kernel::class);
+
+                $kernel->prependMiddleware(HaltIfUnlicensed::class);
+
+                // Renewal runs in terminate(), after the response is flushed,
+                // so an install that serves traffic stays licensed even when
+                // nobody set up cron.
+                $kernel->prependMiddleware(RenewLicense::class);
             });
 
             return;

@@ -5,6 +5,33 @@ All notable changes to `mazaya/license-client`.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-09-10
+
+The heartbeat now runs on its own after an ordinary install, instead of quietly
+never running.
+
+### Added
+
+- **Renewal from web traffic.** Laravel's scheduler only runs if the operating
+  system calls `schedule:run` every minute, and that line is the step most often
+  missed in an on-premise install — invisibly, because everything looks healthy
+  for weeks and then the licence lapses for no apparent reason. Any request can
+  now renew the licence in `terminate()`, after the response has been flushed,
+  so no visitor ever waits on the licence server. A cache lock holds it to one
+  attempt per interval across every process. Disable with
+  `LICENSE_RENEW_ON_REQUEST=false`.
+- **`license:install-scheduler`** writes the cron entry, or prints the exact line
+  and the `crontab -e -u` command when not running as root. A step in a document
+  is a step somebody skips.
+- **`license:status` says so when the scheduler is not running** — if the last
+  heartbeat is older than two scheduled runs, it prints the cron line to add.
+
+### Note
+
+Renewal from traffic does not replace the scheduler: an installation that
+serves no requests still needs it. What it removes is the silent failure when
+nobody set it up.
+
 ## [1.3.0] - 2026-09-10
 
 ### Added

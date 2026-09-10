@@ -71,6 +71,22 @@ the guard is global, so removing `license` from a route group changes nothing.
 Enforcement is fail-closed: an error while deciding is treated as unlicensed,
 and removing the package stops the application booting.
 
+## Keeping the licence renewed
+
+Two independent paths, so a missed step is not fatal:
+
+1. **Web traffic.** Any request renews the licence after its response has been
+   sent, at most once per interval. An installation that serves traffic stays
+   licensed with no setup at all.
+2. **The scheduler**, for installations that may sit idle:
+
+```bash
+php artisan license:install-scheduler     # as root: writes /etc/cron.d/…
+php artisan license:install-scheduler --print
+```
+
+`php artisan license:status` warns if neither has run recently.
+
 ## Commands
 
 | Command | Purpose |
@@ -81,6 +97,7 @@ and removing the package stops the application booting.
 | `license:offline-request` | Produce a `.lreq` file when the network is unavailable |
 | `license:offline-apply` | Apply a `.lic` file issued by hand |
 | `license:reseal` | Adopt a deliberate configuration change |
+| `license:install-scheduler` | Install the cron entry the scheduler needs |
 
 ## What it sends
 
