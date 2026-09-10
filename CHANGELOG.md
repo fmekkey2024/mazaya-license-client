@@ -5,6 +5,20 @@ All notable changes to `mazaya/license-client`.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2026-09-10
+
+### Fixed
+
+- **The scheduler silently capped how often an installation could report.** It
+  ran the heartbeat every five minutes, so a two-minute check-in window — which
+  the licence server is perfectly entitled to ask for — could not be honoured:
+  the installation was told to return in two minutes and had no opportunity to
+  until five had passed. Found by requesting frequent check-ins and then
+  revoking a licence, and watching the installation take longer to hear about it
+  than it had been told to. It now runs every minute with `--if-due`, which
+  matches the sixty-second floor the server enforces. In normal operation it
+  wakes, finds nothing due, and exits.
+
 ## [1.6.0] - 2026-09-10
 
 ### Added

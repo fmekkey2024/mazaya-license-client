@@ -216,16 +216,20 @@ class LicenseServiceProvider extends ServiceProvider
         }
 
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
-            // Runs often, acts rarely.
+            // Runs every minute, acts almost never.
             //
-            // The command itself decides whether a heartbeat is due, using the
-            // interval the licence server last asked for. That is what allows an
-            // operator to request frequent check-ins during a support call and
-            // have this installation actually comply — a fixed six-hourly cron
-            // could not. In normal operation this wakes up, finds nothing due,
-            // and exits.
+            // The command decides whether a heartbeat is due, from the interval
+            // the licence server last asked for. Anything less frequent than
+            // this becomes a floor the server cannot ask below: scheduling it
+            // every five minutes silently capped a two-minute check-in window at
+            // five, so an installation could not comply with what it had been
+            // told. The server already refuses to ask for less than sixty
+            // seconds, so a minute is the right cadence.
+            //
+            // In normal operation this wakes, finds nothing due, and exits —
+            // the same cost as any other per-minute scheduled task.
             $schedule->command('license:heartbeat --quiet-fail --if-due')
-                ->everyFiveMinutes()
+                ->everyMinute()
                 ->withoutOverlapping()
                 ->runInBackground();
         });
