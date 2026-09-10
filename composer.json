@@ -1,0 +1,32 @@
+{
+    "name": "mazaya/license-client",
+    "description": "Licensing client for on-premise Mazaya systems. Verifies signed licenses locally and renews them against the Mazaya License Service.",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.2",
+        "ext-sodium": "*",
+        "ext-json": "*",
+        "illuminate/support": "^11.0|^12.0|^13.0",
+        "illuminate/console": "^11.0|^12.0|^13.0",
+        "illuminate/database": "^11.0|^12.0|^13.0",
+        "illuminate/http": "^11.0|^12.0|^13.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Mazaya\\License\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Mazaya\\License\\LicenseServiceProvider"
+            ],
+            "aliases": {
+                "License": "Mazaya\\License\\Facades\\License"
+            }
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
