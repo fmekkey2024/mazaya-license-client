@@ -5,6 +5,38 @@ All notable changes to `mazaya/license-client`.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-09-10
+
+Editing the licensing code now invalidates the licence. Verified against 18
+code-tampering scenarios on a live installation.
+
+### Added
+
+- **Code integrity in the seal.** Every PHP file in this package is hashed, and
+  that digest is folded into the configuration seal. Editing a check, deleting a
+  file, or adding one changes the digest and the licence stops verifying — a
+  one-line comment is enough to trigger it.
+- **An independent seal check in the halt guard**, deliberately not routed
+  through the gate. The gate is what decides tampering, so editing the gate
+  alone would otherwise have been enough to switch that decision off. A checker
+  cannot be the only thing checking itself.
+- The host application's `routes/*.php` and `bootstrap/` files are hashed and
+  **reported on each heartbeat**, so a change is visible on the vendor's
+  dashboard.
+
+### Notes
+
+The host application's own files are reported rather than sealed, on purpose.
+They change with every release of the product, and sealing them would mean a
+forgotten `license:reseal` after a deploy takes a paying customer offline. They
+are also no longer load-bearing: stripping `license` from a route group changes
+nothing, because the guard is prepended to the global middleware stack.
+
+The limit is unchanged and worth restating: the integrity check is itself PHP on
+a machine the customer controls. It now takes edits in at least two files that
+both know about each other, and every one of those edits stops the heartbeat.
+Only a bytecode encoder removes the possibility rather than raising its price.
+
 ## [1.1.0] - 2026-09-10
 
 Removing the licensing now stops the system rather than freeing it. Verified

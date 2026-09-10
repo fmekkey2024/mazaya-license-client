@@ -7,6 +7,8 @@ namespace Mazaya\License\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Mazaya\License\Guard\Gate;
+use Mazaya\License\Guard\Seal;
+use Mazaya\License\Storage\StateStore;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
@@ -32,8 +34,16 @@ class HaltIfUnlicensed
 
             // Asked of the gate, not of config: a hosted install answers no
             // cheaply, while an on-premise one cannot talk its way out of it.
-            if (! $gate->isEnforcing()) {
+            if (! $gate->isEnforcing() || $this->isExempt($request)) {
                 return $next($request);
+            }
+
+            // Verified here as well as in the gate, and deliberately not by
+            // calling into it. The gate is what decides tampering, so editing
+            // the gate alone would otherwise be enough to switch that decision
+            // off — a checker cannot be the only thing checking itself.
+            if (! $this->sealIntact()) {
+                return $this->halt($request, 'This system\'s licensing configuration has been altered.');
             }
 
             $state = $gate->state();
@@ -53,6 +63,36 @@ class HaltIfUnlicensed
         } catch (Throwable) {
             return $this->halt($request, 'This system could not verify its license.');
         }
+    }
+
+    private function isExempt(Request $request): bool
+    {
+        $patterns = (array) config('license.exempt', []);
+
+        return $patterns !== [] && $request->is(...$patterns);
+    }
+
+    private function sealIntact(): bool
+    {
+        $store = app(StateStore::class);
+
+        $installId = $store->installId();
+
+        // Never activated: there is nothing that could have been tampered with,
+        // so let the ordinary state logic decide and keep the read-only
+        // concession a fresh installation is entitled to.
+        if ($installId === null) {
+            return true;
+        }
+
+        $secret = $store->secret();
+        $seal   = $store->seal();
+
+        if ($secret === null || $seal === null) {
+            return false;
+        }
+
+        return app(Seal::class)->matches($seal, $installId, $secret);
     }
 
     private function halt(Request $request, string $headline): Response

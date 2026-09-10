@@ -22,7 +22,10 @@ use Illuminate\Contracts\Config\Repository as Config;
  */
 final class Seal
 {
-    public function __construct(private readonly Config $config) {}
+    public function __construct(
+        private readonly Config $config,
+        private readonly Integrity $integrity,
+    ) {}
 
     public function compute(string $installId, string $secret): string
     {
@@ -54,6 +57,10 @@ final class Seal
             'server'      => rtrim((string) $this->config->get('license.server'), '/'),
             'enforcement' => (string) $this->config->get('license.enforcement'),
             'keys'        => $keys,
+
+            // The licensing code itself. Editing a check, or deleting the file
+            // it lives in, changes this and the licence stops verifying.
+            'code'        => $this->integrity->digest(),
         ], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
     }
 }

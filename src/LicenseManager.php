@@ -8,6 +8,7 @@ use Illuminate\Contracts\Config\Repository as Config;
 use Mazaya\License\Enums\LicenseState;
 use Mazaya\License\Fingerprint\Collector;
 use Mazaya\License\Guard\Gate;
+use Mazaya\License\Guard\Integrity;
 use Mazaya\License\Guard\Seal;
 use Mazaya\License\Storage\ClockGuard;
 use Mazaya\License\Storage\StateStore;
@@ -25,6 +26,7 @@ final class LicenseManager
     public function __construct(
         private readonly Gate $gate,
         private readonly Seal $seal,
+        private readonly Integrity $integrity,
         private readonly StateStore $store,
         private readonly Verifier $verifier,
         private readonly Collector $fingerprints,
@@ -143,6 +145,12 @@ final class LicenseManager
             'integrity'   => [
                 'license_file_ok' => ! $this->store->integritySuspect(),
                 'clock_ok'        => ! $this->clock->rolledBack(),
+
+                // The host application's routes and bootstrap are reported, not
+                // sealed: they change with every release of the product, and
+                // sealing them would mean a forgotten reseal after a deploy
+                // takes a paying customer down. A change shows on the dashboard.
+                'host_files'      => $this->integrity->hostFiles(base_path()),
             ],
         ]);
 

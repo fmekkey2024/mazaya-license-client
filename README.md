@@ -56,6 +56,16 @@ adopt it with:
 php artisan license:reseal
 ```
 
+The seal also covers **this package's own code**. Every PHP file in it is
+hashed, so editing a check, deleting a file or adding one invalidates the
+licence rather than disabling it.
+
+Your application's own files are not sealed — they change with every release,
+and sealing them would mean a forgotten `license:reseal` after a deploy takes a
+paying customer offline. Their hashes are reported on each heartbeat instead, so
+a change is visible on the vendor's dashboard. They are not load-bearing either:
+the guard is global, so removing `license` from a route group changes nothing.
+
 Enforcement is fail-closed: an error while deciding is treated as unlicensed,
 and removing the package stops the application booting.
 
