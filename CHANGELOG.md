@@ -5,6 +5,43 @@ All notable changes to `mazaya/license-client`.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-09-10
+
+### Added
+
+- **The licence server now says when to come back**, and this client obeys it.
+  Every heartbeat response carries a `check_in` interval, stored as the next due
+  time. An operator can shorten it from the panel for a couple of hours, which
+  is as close to watching an installation live as is possible without an inbound
+  path into the customer's network — and that single outbound rule is what made
+  the arrangement acceptable to their security team in the first place.
+- **`license:heartbeat --if-due`**, and the scheduled run now happens every five
+  minutes using it. It wakes, finds nothing due, and exits. That is what lets a
+  shortened check-in window actually be honoured; a fixed six-hourly cron could
+  not.
+- **The licence notice is placed automatically** on the application's own pages,
+  so a product needs no licensing code at all. `@include('license::banner')`
+  still works for precise placement and is not duplicated;
+  `LICENSE_INJECT_NOTICE=false` turns the injection off.
+
+### Fixed
+
+- **The locked page arrived without the vendor's explanation.** The global guard
+  passed no message, so a customer saw only that the system had stopped — and
+  the first thing anyone does then is telephone somebody to ask why.
+- **A rejected request could overwrite the vendor's words.** An unauthorised
+  heartbeat answers with its own explanation — "request timestamp outside the
+  accepted window" — and that was being stored and shown to the customer as
+  though the vendor had said it. Only real verdicts are kept now.
+- A suspension is shown to the customer **from the moment it happens**, rather
+  than silently counting down and stopping days later with no warning given.
+
+### Note
+
+The first report after requesting frequent check-ins still arrives on the
+installation's existing schedule. Nothing can change that. For something
+immediate, the customer's own administrator runs `php artisan license:heartbeat`.
+
 ## [1.5.1] - 2026-09-10
 
 Both fixes come from rehearsing a real install end to end, on a licence with a

@@ -88,10 +88,53 @@ final class LicenseManager
         return $this->store->lastHeartbeatAt();
     }
 
+    /**
+     * What the licence server last said, when it was not simply "active".
+     *
+     * A suspension takes effect at the server immediately but only stops the
+     * system when the current token lapses — days later. Without this the
+     * customer sees nothing at all in between, and then one morning the system
+     * stops with no warning they were ever given. Showing the vendor's own
+     * words from the moment of suspension is both fairer and far more likely to
+     * get the invoice paid before anything breaks.
+     */
+    public function vendorNotice(): ?string
+    {
+        $status = $this->store->lastStatus();
+
+        if ($status === null || in_array($status, ['active', 'unknown'], true)) {
+            return null;
+        }
+
+        return $this->store->lastMessage();
+    }
+
+    /** Seconds until the next heartbeat is due, per the server's own instruction. */
+    public function secondsUntilCheckIn(): int
+    {
+        return $this->store->secondsUntilCheckIn(
+            max(1, (int) $this->config->get('license.heartbeat_hours', 6)) * 3600
+        );
+    }
+
+    public function isCheckInDue(): bool
+    {
+        return $this->secondsUntilCheckIn() <= 0;
+    }
+
+    /** The last word from the licence server: active, suspended, revoked, expired. */
+    public function vendorStatus(): ?string
+    {
+        return $this->store->lastStatus();
+    }
+
     /** True while the banner should be visible to everyone, not just admins. */
     public function shouldWarnEveryone(): bool
     {
-        return $this->gate->state() === LicenseState::Grace;
+        // A suspension or revocation concerns everyone using the system, not
+        // only whoever happens to be an administrator.
+        return $this->gate->state() === LicenseState::Grace
+            || $this->vendorNotice() !== null;
     }
 
     // --------------------------------------------------------------- lifecycle
@@ -162,10 +205,44 @@ final class LicenseManager
             $this->applyToken($response['license']);
         }
 
-        $this->store->recordHeartbeat($response['status'] ?? 'unknown', $response['message'] ?? null);
+        $this->recordVerdict($response);
         $this->gate->flush();
 
         return $response;
+    }
+
+    /**
+     * Statuses that represent the vendor's decision about this licence, as
+     * opposed to something going wrong on the way there.
+     */
+    private const VERDICTS = ['active', 'suspended', 'revoked', 'expired', 'blocked', 'activation_limit'];
+
+    /**
+     * Only a real verdict is kept as the vendor's message.
+     *
+     * A rejected request answers with its own explanation — "signature
+     * mismatch", "request timestamp outside the accepted window" — and storing
+     * that as the vendor's words puts an internal transport error in front of
+     * the customer, on the page they see when the system stops. It is both
+     * confusing and untrue: the vendor never said it. Anything that is not a
+     * verdict leaves the last real message standing.
+     */
+    private function recordVerdict(array $response): void
+    {
+        $status = $response['status'] ?? 'unknown';
+
+        if (! in_array($status, self::VERDICTS, true)) {
+            return;
+        }
+
+        // The server says when to come back. Honouring it is what lets an
+        // operator watch an installation closely during a support call without
+        // the whole fleet polling every two minutes for ever.
+        $this->store->recordHeartbeat(
+            $status,
+            $response['message'] ?? null,
+            isset($response['check_in']) ? (int) $response['check_in'] : null,
+        );
     }
 
     /**

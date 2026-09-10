@@ -27,6 +27,7 @@ use Mazaya\License\Guard\Integrity;
 use Mazaya\License\Guard\Seal;
 use Mazaya\License\Http\Middleware\EnforceLicense;
 use Mazaya\License\Http\Middleware\HaltIfUnlicensed;
+use Mazaya\License\Http\Middleware\InjectLicenseNotice;
 use Mazaya\License\Http\Middleware\RenewLicense;
 use Mazaya\License\Storage\ClockGuard;
 use Mazaya\License\Storage\StateStore;
@@ -142,6 +143,9 @@ class LicenseServiceProvider extends ServiceProvider
                 // so an install that serves traffic stays licensed even when
                 // nobody set up cron.
                 $kernel->prependMiddleware(RenewLicense::class);
+
+                // Appended, not prepended: it needs the finished page to inject into.
+                $kernel->pushMiddleware(InjectLicenseNotice::class);
             });
 
             return;
@@ -212,10 +216,16 @@ class LicenseServiceProvider extends ServiceProvider
         }
 
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
-            $hours = max(1, (int) $this->app['config']->get('license.heartbeat_hours', 6));
-
-            $schedule->command('license:heartbeat --quiet-fail')
-                ->cron('17 */'.$hours.' * * *')  // offset so fleets do not all call on the hour
+            // Runs often, acts rarely.
+            //
+            // The command itself decides whether a heartbeat is due, using the
+            // interval the licence server last asked for. That is what allows an
+            // operator to request frequent check-ins during a support call and
+            // have this installation actually comply — a fixed six-hourly cron
+            // could not. In normal operation this wakes up, finds nothing due,
+            // and exits.
+            $schedule->command('license:heartbeat --quiet-fail --if-due')
+                ->everyFiveMinutes()
                 ->withoutOverlapping()
                 ->runInBackground();
         });

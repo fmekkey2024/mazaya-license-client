@@ -84,6 +84,16 @@ return [
     */
     'renew_on_request' => env('LICENSE_RENEW_ON_REQUEST', true),
 
+    /*
+    |---------------------------------------------------------------------------
+    | Show the notice automatically
+    |---------------------------------------------------------------------------
+    | Places the licence banner at the top of the application's own pages, so
+    | the product needs no code at all. Turn it off to position the banner
+    | yourself with @include('license::banner').
+    */
+    'inject_notice' => env('LICENSE_INJECT_NOTICE', true),
+
     // Seconds the evaluated state is cached. The verification itself costs
     // ~0.09ms; this exists to avoid a database read on every request.
     'cache_ttl' => (int) env('LICENSE_CACHE_TTL', 60),

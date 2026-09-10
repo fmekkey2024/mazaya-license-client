@@ -86,6 +86,26 @@ final class StateStore
         return $this->row()['last_heartbeat_at'] ?? null;
     }
 
+    /** When the licence server asked this installation to report next. */
+    public function nextCheckInAt(): ?string
+    {
+        return $this->row()['next_check_in_at'] ?? null;
+    }
+
+    /** Seconds until the next heartbeat is due; negative once it is overdue. */
+    public function secondsUntilCheckIn(int $default): int
+    {
+        $next = $this->nextCheckInAt();
+
+        if ($next !== null) {
+            return strtotime($next) - time();
+        }
+
+        $last = $this->lastHeartbeatAt();
+
+        return $last === null ? -1 : (strtotime($last) + $default) - time();
+    }
+
     /** True when one copy was missing or behind — worth reporting home. */
     public function integritySuspect(): bool
     {
@@ -144,12 +164,15 @@ final class StateStore
         }
     }
 
-    public function recordHeartbeat(string $status, ?string $message): void
+    public function recordHeartbeat(string $status, ?string $message, ?int $checkInSeconds = null): void
     {
         $this->put([
             'last_status'       => $status,
             'last_message'      => $message,
             'last_heartbeat_at' => now()->toDateTimeString(),
+            'next_check_in_at'  => $checkInSeconds === null
+                ? null
+                : now()->addSeconds(max(60, $checkInSeconds))->toDateTimeString(),
         ]);
     }
 

@@ -10,12 +10,20 @@ use Throwable;
 
 class HeartbeatCommand extends Command
 {
-    protected $signature = 'license:heartbeat {--quiet-fail : Exit 0 even if the server is unreachable}';
+    protected $signature = 'license:heartbeat {--quiet-fail : Exit 0 even if the server is unreachable}
+                                               {--if-due : Do nothing unless the next check-in is due}';
 
     protected $description = 'Renew this installation\'s license';
 
     public function handle(LicenseManager $license): int
     {
+        // The scheduler runs this every few minutes so a shortened check-in
+        // window is actually honoured; --if-due is what keeps that from meaning
+        // a heartbeat every few minutes the rest of the time.
+        if ($this->option('if-due') && ! $license->isCheckInDue()) {
+            return self::SUCCESS;
+        }
+
         try {
             $response = $license->refresh();
         } catch (Throwable $exception) {

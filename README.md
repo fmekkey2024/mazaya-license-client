@@ -47,7 +47,9 @@ read-only policy on top:
 Route::middleware(['web', 'license'])->group(/* ... */);
 ```
 
-`@include('license::banner')` in your layout renders the warning states.
+The licence notice is placed on your pages automatically, so there is nothing
+to add. To position it yourself instead, use `@include('license::banner')` — it
+will not be duplicated — or set `LICENSE_INJECT_NOTICE=false`.
 
 ## Tamper resistance
 

@@ -16,6 +16,8 @@ use Mazaya\License\LicenseManager;
  * @method static int|null daysRemaining()
  * @method static int|null expiresAt()
  * @method static string|null message()
+ * @method static string|null vendorNotice()
+ * @method static string|null vendorStatus()
  * @method static array|null payload()
  * @method static string|null installId()
  * @method static string|null lastHeartbeatAt()

@@ -57,11 +57,14 @@ class RenewLicense
                 return;   // never activated; there is nothing to renew
             }
 
+            $license  = app(LicenseManager::class);
             $interval = max(1, (int) config('license.heartbeat_hours', 6)) * 3600;
-            $last     = $store->lastHeartbeatAt();
 
-            if ($last !== null && strtotime($last) > time() - $interval) {
-                return;   // renewed recently enough
+            // The server's own instruction, when it gave one. During a support
+            // window that is minutes rather than hours, so traffic alone brings
+            // the installation back quickly.
+            if (! $license->isCheckInDue()) {
+                return;
             }
 
             // First request through the gate wins; the rest skip for a whole

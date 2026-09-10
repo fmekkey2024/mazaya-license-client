@@ -7,6 +7,7 @@ namespace Mazaya\License\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Mazaya\License\Guard\Gate;
+use Mazaya\License\LicenseManager;
 use Mazaya\License\Guard\Seal;
 use Mazaya\License\Storage\StateStore;
 use Symfony\Component\HttpFoundation\Response;
@@ -97,7 +98,21 @@ class HaltIfUnlicensed
 
     private function halt(Request $request, string $headline): Response
     {
-        $payload = ['headline' => $headline, 'message' => null, 'state' => 'halted'];
+        // The vendor's own explanation, straight from the last heartbeat.
+        // Without it the customer sees only that the system stopped, and the
+        // first thing they do is telephone somebody to ask why.
+        $message = null;
+        $state   = 'halted';
+
+        try {
+            $license = app(LicenseManager::class);
+            $message = $license->message();
+            $state   = $license->state()->value;
+        } catch (Throwable) {
+            // fall back to the headline alone
+        }
+
+        $payload = ['headline' => $headline, 'message' => $message, 'state' => $state];
 
         if ($request->expectsJson()) {
             return response()->json($payload, 402);

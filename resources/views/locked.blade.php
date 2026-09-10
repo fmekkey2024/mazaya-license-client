@@ -24,7 +24,7 @@
             font: 15px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
         }
         .card {
-            width: 100%; max-width: 520px; background: var(--card);
+            width: 100%; max-width: 560px; background: var(--card);
             border: 1px solid var(--line); border-radius: 14px; padding: 32px;
             box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
         }
@@ -38,31 +38,39 @@
         h1 { margin: 0 0 12px; font-size: 21px; font-weight: 650; letter-spacing: -.01em; }
         p { margin: 0 0 16px; color: var(--muted); }
         .message {
-            margin: 20px 0 0; padding: 14px 16px; border-radius: 9px;
+            margin: 20px 0 0; padding: 16px 18px; border-radius: 9px;
             background: var(--accent-bg); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
             color: var(--ink);
         }
+        .message strong { display: block; margin-bottom: 6px; font-size: 12px;
+            letter-spacing: .04em; text-transform: uppercase; color: var(--accent); }
         .note { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
-        code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
     </style>
 </head>
 <body>
     <main class="card">
-        <span class="badge">License</span>
+        <span class="badge">{{ $state === 'halted' ? 'License' : ucfirst($state) }}</span>
 
         <h1>{{ $headline }}</h1>
 
         <p>This system cannot be modified until its license is renewed. Please contact your vendor to restore access.</p>
 
         @if (! empty($message))
-            <div class="message">{{ $message }}</div>
+            {{-- The vendor's own words. Without them the customer knows only
+                 that something stopped, and the first thing they do is
+                 telephone somebody to ask why. --}}
+            <div class="message">
+                <strong>From your vendor</strong>
+                {{ $message }}
+            </div>
         @endif
 
-        {{-- Stated plainly, because it is the first thing an anxious administrator
-             needs to know, and because it is true: nothing has been deleted. --}}
+        {{-- Stated plainly, because it is the first thing an anxious
+             administrator needs to know, and because it is true. --}}
         <div class="note">
-            Your data has not been altered or removed. Once the license is renewed,
-            the system resumes exactly where it left off.
+            Your data has not been altered or removed, and remains readable and
+            exportable. Once the license is renewed the system resumes exactly
+            where it left off.
         </div>
     </main>
 </body>
