@@ -6,6 +6,8 @@ Verifies a signed license **locally** and renews it against the Mazaya License
 Service. The network is needed to renew, never to check — an install behind a
 broken VPN keeps working for the life of its current token.
 
+Requires PHP 8.2+ with `ext-sodium`, and Laravel 10, 11, 12 or 13.
+
 ## Install
 
 ```bash

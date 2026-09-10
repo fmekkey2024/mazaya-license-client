@@ -77,7 +77,14 @@ final class Integrity
     {
         $paths = array_merge(
             glob($basePath.'/routes/*.php') ?: [],
-            [$basePath.'/bootstrap/app.php', $basePath.'/bootstrap/providers.php'],
+            [
+                // Laravel 11+
+                $basePath.'/bootstrap/app.php',
+                $basePath.'/bootstrap/providers.php',
+                // Laravel 10 equivalents
+                $basePath.'/app/Http/Kernel.php',
+                $basePath.'/config/app.php',
+            ],
         );
 
         $hashes = [];

@@ -173,6 +173,12 @@ class LicenseServiceProvider extends ServiceProvider
             'license:', 'migrate', 'config:', 'cache:', 'optimize', 'view:', 'route:', 'event:',
             'package:discover', 'vendor:publish', 'storage:link', 'key:generate',
             'about', 'list', 'help', 'env', 'schedule:run', 'schedule:work', 'down', 'up',
+
+            // `serve` hosts the application; it does not operate it. Blocking it
+            // stopped the web server from starting at all, so a customer whose
+            // licence had lapsed could not even reach the page explaining why.
+            // The HTTP guard is what enforces there, and it does so gracefully.
+            'serve',
         ] as $prefix) {
             if ($command === $prefix || str_starts_with($command, $prefix)) {
                 return true;

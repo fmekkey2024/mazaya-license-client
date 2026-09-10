@@ -5,6 +5,35 @@ All notable changes to `mazaya/license-client`.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-09-10
+
+### Added
+
+- **Laravel 10 support.** Nothing in the package needed changing — every
+  framework API it uses exists in 10 — the constraint was simply too narrow and
+  `composer require` refused to install. Verified end to end on Laravel 10.50.3:
+  activation, enforcement, the configuration seal and recovery all behave
+  identically. `Integrity::hostFiles()` now also reports `app/Http/Kernel.php`
+  and `config/app.php`, which are Laravel 10's equivalents of
+  `bootstrap/providers.php`.
+
+### Fixed
+
+- **`php artisan serve` was refused by the console guard**, so on an unlicensed
+  or tampered installation the web server would not start at all and the
+  customer could not reach the page explaining why. `serve` hosts the
+  application rather than operating it, and the HTTP guard is what enforces
+  there — gracefully, with a 402 and an explanation. It is now on the recovery
+  allowlist. Production installations sit behind nginx and were unaffected;
+  this only ever showed up when running locally.
+
+### Note
+
+Composer **blocks Laravel 10 by default** — the 10.x line carries five
+unresolved security advisories. Installing it needs `--no-security-blocking` or
+an explicit advisory-ignore policy. That is worth knowing before shipping a
+Laravel 10 product to a customer who runs a security review.
+
 ## [1.2.1] - 2026-09-10
 
 ### Fixed
