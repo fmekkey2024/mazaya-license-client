@@ -5,6 +5,22 @@ All notable changes to `mazaya/license-client`.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-09-10
+
+### Fixed
+
+- **Activation failed on macOS and Windows.** Every fingerprint source was
+  Linux-only — `/etc/machine-id`, `/proc/cpuinfo`, `/sys/class/net` — so on a
+  developer's laptop each component came back empty and the licence server
+  rejected the request with a validation error, which is a confusing way to
+  learn the package does not run on your machine. Each component now has macOS
+  and Windows sources, unreadable ones are omitted rather than sent empty, and a
+  machine that can identify itself in no other way falls back to an id generated
+  once and kept alongside the licence.
+
+Production installations are unaffected: a Linux host still reports the same
+four components as before.
+
 ## [1.2.0] - 2026-09-10
 
 Editing the licensing code now invalidates the licence. Verified against 18
