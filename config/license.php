@@ -86,6 +86,22 @@ return [
 
     /*
     |---------------------------------------------------------------------------
+    | Strict integrity
+    |---------------------------------------------------------------------------
+    | When on, the seal covers the ENTIRE application's source — every PHP,
+    | Blade and config file, minus runtime paths (storage, bootstrap/cache,
+    | vendor, .env). Editing any file anywhere invalidates the licence until an
+    | operator runs `php artisan license:reseal`.
+    |
+    | This is deliberate lockdown: a deploy, or any `composer update`, changes
+    | the fingerprint and must be followed by a reseal, or the system stops.
+    | Turn it off (the looser default the package ships with) if the product is
+    | updated in place without a reseal step in the deploy.
+    */
+    'strict_integrity' => env('LICENSE_STRICT_INTEGRITY', true),
+
+    /*
+    |---------------------------------------------------------------------------
     | Show the notice automatically
     |---------------------------------------------------------------------------
     | Places the licence banner at the top of the application's own pages, so

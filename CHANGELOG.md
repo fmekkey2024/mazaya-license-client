@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.7.0] - 2026-09-13
+
+### Added
+
+- **Strict integrity mode** (`LICENSE_STRICT_INTEGRITY`, on by default). The seal
+  now covers the entire application's source — every PHP, Blade and config file —
+  not just this package. Editing any file anywhere invalidates the licence until
+  an operator reseals. Runtime paths are excluded so ordinary operation does not
+  self-lock: `storage/`, `bootstrap/cache/`, `vendor/`, `public/`, `.env`.
+
+### Changed
+
+- **`license:reseal` is now a full deploy step.** It flushes every stale cache,
+  reseals against the code on disk, rebuilds the caches, and prints the status.
+  A deploy or `composer update` moves the fingerprint and must be followed by
+  one `php artisan license:reseal` — nothing else. `--no-cache` reseals only.
+
+
 All notable changes to `mazaya/license-client`.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
