@@ -24,7 +24,7 @@ class InstallSchedulerCommand extends Command
     {
         $path = base_path();
         $php  = PHP_BINARY;
-        $user = $this->option('user') ?: $this->currentUser();
+        $user = $this->option('user') ?: $this->appUser();
         $line = "* * * * * {$user} cd {$path} && {$php} artisan schedule:run >> /dev/null 2>&1";
 
         if ($this->option('print')) {
@@ -68,6 +68,31 @@ class InstallSchedulerCommand extends Command
         $slug = preg_replace('/[^a-z0-9-]+/', '-', strtolower((string) config('app.name', 'app')));
 
         return trim((string) $slug, '-').'-scheduler';
+    }
+
+    /**
+     * The user the scheduler line should run as.
+     *
+     * Under sudo the process is root, but the cron must run as the user that
+     * owns the application -- otherwise schedule:run writes caches and logs as
+     * root and the app can no longer read them. The owner of the application
+     * directory is that user.
+     */
+    private function appUser(): string
+    {
+        if ($this->runningAsRoot() && function_exists('posix_getpwuid')) {
+            $owner = @fileowner(base_path());
+
+            if ($owner !== false) {
+                $info = posix_getpwuid($owner);
+
+                if (is_array($info) && isset($info['name']) && $info['name'] !== 'root') {
+                    return (string) $info['name'];
+                }
+            }
+        }
+
+        return $this->currentUser();
     }
 
     private function currentUser(): string

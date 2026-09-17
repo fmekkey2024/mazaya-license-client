@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.10.1] - 2026-09-17
+
+### Added
+
+- **`license:activate` sets up automatic renewal itself.** After a successful
+  activation it installs the scheduler cron, best-effort: run as root (or with
+  sudo) it writes the cron and the licence renews on its own; run as a non-root
+  user the activation still succeeds and it prints the one line to add, noting
+  that ordinary web traffic renews the licence in the meantime.
+
+### Fixed
+
+- `license:install-scheduler`, when run with sudo, writes the cron to run as the
+  **owner of the application directory** rather than root -- so `schedule:run`
+  does not create caches and logs the web user (nginx/FPM) cannot read.
+
+
 ## [1.10.0] - 2026-09-17
 
 ### Added

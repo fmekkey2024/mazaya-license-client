@@ -37,6 +37,19 @@ class ActivateCommand extends Command
         $this->line("  install id : {$response['install_id']}");
         $this->line('  expires    : '.date('Y-m-d H:i', (int) ($license->expiresAt() ?? 0)));
 
+        $this->newLine();
+        $this->line('Setting up automatic renewal...');
+
+        // Best-effort: install the scheduler cron so the licence renews on its
+        // own. Writing /etc/cron.d needs root, so a non-root activation still
+        // succeeds -- it just cannot finish this one step itself, and says so.
+        if ($this->call('license:install-scheduler') !== self::SUCCESS) {
+            $this->newLine();
+            $this->line('That step needs root: re-run this as root (or with sudo) to finish it, or');
+            $this->line('add the cron line shown above. Until then, ordinary web traffic still');
+            $this->line('renews the licence on its own -- any request does it.');
+        }
+
         return self::SUCCESS;
     }
 }
