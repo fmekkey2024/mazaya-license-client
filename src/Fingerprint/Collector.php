@@ -156,8 +156,13 @@ final class Collector
             return '';
         }
 
+        // Silence stderr the way the host OS understands: /dev/null on Unix,
+        // NUL on Windows. Appending the Unix form on Windows makes cmd.exe fail
+        // with "The system cannot find the path specified" on every probe.
+        $silence = stripos(PHP_OS, 'WIN') === 0 ? ' 2>NUL' : ' 2>/dev/null';
+
         try {
-            return (string) @shell_exec($command.' 2>/dev/null');
+            return (string) @shell_exec($command.$silence);
         } catch (Throwable) {
             return '';
         }

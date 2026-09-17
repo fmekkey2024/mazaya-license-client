@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.11.2] - 2026-09-17
+
+### Fixed
+
+- **Windows compatibility.** The fingerprint collector and the listener's
+  heartbeat subprocess silenced stderr with the Unix `/dev/null`, so on Windows
+  every probe printed "The system cannot find the path specified". Now uses `NUL`
+  on Windows and `/dev/null` elsewhere, so Windows hardware fingerprinting
+  (machine-id / MAC via reg / getmac) works cleanly and quietly.
+
+
 ## [1.11.1] - 2026-09-17
 
 ### Changed

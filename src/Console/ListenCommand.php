@@ -142,6 +142,7 @@ class ListenCommand extends Command
     private function beat(): void
     {
         $cmd = escapeshellarg(PHP_BINARY).' '.escapeshellarg(base_path('artisan')).' license:heartbeat --quiet-fail';
-        @exec($cmd.' > /dev/null 2>&1');
+        $redirect = stripos(PHP_OS, 'WIN') === 0 ? ' > NUL 2>&1' : ' > /dev/null 2>&1';
+        @exec($cmd.$redirect);
     }
 }
