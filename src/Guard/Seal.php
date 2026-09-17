@@ -58,10 +58,6 @@ final class Seal
             'enforcement' => (string) $this->config->get('license.enforcement'),
             'keys'        => $keys,
 
-            // The licensing code itself. Editing a check, or deleting the file
-            // it lives in, changes this and the licence stops verifying.
-            'code'        => $this->integrity->digest(),
-
             // In strict mode, the whole application's source too — every PHP,
             // Blade and config file, minus what changes at runtime. Any edit to
             // any of it invalidates the licence until an operator reseals.

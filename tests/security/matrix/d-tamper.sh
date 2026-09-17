@@ -64,8 +64,11 @@ ck "config change detected" "$(cstate)"       "tampered"
 sed -i "s|^LICENSE_SERVER=.*|$ORIG_SRV|" "$CLIENT_APP/.env"; cflush
 ck "restored"             "$(cstate)"         "active"
 
-group "D6. Code edit -> auto-suspend -> vendor approve -> resume (v1.9.0)"
-edit_file "$GUARD_DIR/Gate.php"
+group "D6. HOST-APP code edit -> auto-suspend -> approve -> resume"
+# The customer's own app code (covered by strict_integrity) is the resumable
+# case: the vendor sees the change and approves it. (Agent code is NOT resumable
+# — see D7.)
+hostapp_edit
 ck "client sees tampered"       "$(cstate_fresh)"                 "tampered"
 cbeat
 ck "server auto-suspended"      "$(srv_status)"                   "suspended"
@@ -75,21 +78,19 @@ cbeat                                   # directive reseals the client, no manua
 ck "client resumed to active"   "$(cstate)"                       "active"
 cbeat                                   # confirms code_ok, server clears the directive
 ck "server cleared reseal_req"  "$(srv_activation | cut -d'|' -f2)" "false"
-# clean up the edit we asked the vendor to accept
-restore_file "$GUARD_DIR/Gate.php"; creseal; cbeat; cflush
+hostapp_clean; creseal; cbeat; cflush
 ck "back to clean baseline"     "$(cstate)"                       "active"
 
-group "D7. KNOWN GAP (v1.9.0) — local self-reseal adopts an edit with no vendor sign-off"
-# Documented, not a pass/fail on security: this is exactly what the v1.10.0
-# vendor-signed manifest closes. Today, anyone who can run the command adopts
-# their own edit. The manifest suite (added with v1.10.0) will flip this to a
-# FAIL-if-accepted assertion.
+group "D7. Agent-code self-reseal is CLOSED (v1.10.0 vendor-signed manifest)"
+# The v1.9.0 gap — a local reseal adopting an edit to the enforcement code — is
+# gone: the Agent's code is vouched for by a vendor-signed manifest the customer
+# cannot reproduce. A reseal no longer resumes it; only restoring the signed code
+# (or a new vendor release) does.
 edit_file "$GUARD_DIR/Gate.php"
-BEFORE="$(cstate_fresh)"
+ck "Agent edit -> tampered"                 "$(cstate_fresh)" "tampered"
 cart license:reseal >/dev/null 2>&1; cflush
-AFTER="$(cstate)"
-printf "  ${Y}NOTE${O}  self-reseal: tampered->%s (edit adopted locally, no vendor sign-off)\n" "$AFTER"
-ck "gap present as expected (edit->tampered)" "$BEFORE" "tampered"
+ck "reseal does NOT resume (manifest wins)" "$(cstate)"       "tampered"
 restore_file "$GUARD_DIR/Gate.php"; creseal; cflush
+ck "restoring vendor code resumes it"       "$(cstate)"       "active"
 
 summary

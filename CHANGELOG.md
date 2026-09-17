@@ -1,5 +1,37 @@
 # Changelog
 
+## [1.10.0] - 2026-09-17
+
+### Added
+
+- **Vendor-signed Agent manifest.** The Agent's own code is vouched for by an
+  Ed25519 manifest the vendor signs at build time (`license:sign-agent-manifest`
+  on the server), verified by the client with the public key it already trusts
+  for tokens. Editing any Agent file -- a check, the Verifier, the fingerprint
+  collector -- no longer verifies, and **`license:reseal` can no longer adopt
+  the edit**: forging the manifest needs the product's private key, which never
+  leaves the licence server. Only restoring the signed code, or a new vendor
+  release, resumes it.
+
+### Changed
+
+- The Agent's own code left the resealable configuration seal; it is covered by
+  the signed manifest instead. The seal still covers configuration and, in
+  strict mode, the host application's own source -- which legitimately changes
+  per deploy and stays adopt-able via the panel's approve-and-resume flow. **A
+  reseal is required after upgrading**, and the signed manifest must be present
+  (baked into the per-product build).
+
+### Security
+
+- Closes the v1.9.0 self-reseal gap: the seal was a symmetric HMAC keyed by the
+  per-install secret, which lives on the customer's box, so a privileged
+  attacker could recompute it. The manifest is asymmetric -- the customer's box
+  holds only the public key, and swapping it breaks token verification too. This
+  does not stop an attacker who removes the check itself (that is the bar code
+  encoding raises); it removes the one-command self-reseal.
+
+
 ## [1.9.0] - 2026-09-17
 
 ### Added

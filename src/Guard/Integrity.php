@@ -37,6 +37,32 @@ final class Integrity
             return $this->cached;
         }
 
+        $hashes = $this->fileHashes();
+
+        if (isset($hashes['__unreadable__'])) {
+            // An unreadable package directory is itself a reason to distrust
+            // the installation, so it must not hash to the same thing twice.
+            return $this->cached = 'unreadable';
+        }
+
+        if ($hashes === []) {
+            return $this->cached = 'empty';
+        }
+
+        return $this->cached = hash('sha256', json_encode($hashes, JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * Every PHP file in the package as relpath => sha256, sorted by path.
+     *
+     * The raw material for both the folded digest above and the vendor-signed
+     * manifest the client verifies against. One walk, so the two can never
+     * disagree about which files count.
+     *
+     * @return array<string, string>
+     */
+    public function fileHashes(): array
+    {
         $hashes = [];
 
         try {
@@ -54,19 +80,13 @@ final class Integrity
                 $hashes[$relative] = hash_file('sha256', $file->getPathname());
             }
         } catch (Throwable) {
-            // An unreadable package directory is itself a reason to distrust
-            // the installation, so it must not hash to the same thing twice.
-            return $this->cached = 'unreadable';
+            return ['__unreadable__' => '1'];
         }
 
-        if ($hashes === []) {
-            return $this->cached = 'empty';
-        }
-
-        // Sorted so the digest depends on the files, not on directory order.
+        // Sorted so the result depends on the files, not on directory order.
         ksort($hashes);
 
-        return $this->cached = hash('sha256', json_encode($hashes, JSON_THROW_ON_ERROR));
+        return $hashes;
     }
 
     /**

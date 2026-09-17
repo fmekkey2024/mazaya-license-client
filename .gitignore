@@ -2,3 +2,6 @@
 /composer.lock
 .phpunit.result.cache
 .DS_Store
+
+# Build-generated, per-product (signed by license:sign-agent-manifest at release)
+agent-manifest.mlic

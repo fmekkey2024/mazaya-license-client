@@ -20,7 +20,7 @@ tests/security/
 │   ├── b-binding.sh       # B — Installation Binding (strict fingerprint)
 │   ├── c-availability.sh  # C — Availability / Time (outage, clock, 4h leash, grace)
 │   ├── d-tamper.sh        # D — Tamper (edit Guard/seal/config; approve→resume)
-│   └── manifest.sh        # (pending v1.10.0) vendor-signed manifest + forgery test
+│   └── manifest.sh        # M — vendor-signed Agent manifest + forgery test
 └── contract/
     └── contract.sh        # wire schema, token claims, seq monotonicity, transitions
 ```
@@ -50,7 +50,7 @@ sudo bash tests/security/run.sh            # the whole gate
 sudo bash tests/security/matrix/d-tamper.sh # one group
 ```
 
-Counts at v1.9.0: **A 15 · B 25 · C 18 · D 22 · Contract 21 = 101 assertions.**
+Counts at v1.10.0: **A 15 · B 25 · C 18 · D 24 · Contract 21 · Manifest 13 = 116 assertions.**
 
 ## What each group proves
 

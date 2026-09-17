@@ -41,6 +41,7 @@ final class Gate
         private readonly Seal $seal,
         private readonly Cache $cache,
         private readonly Config $config,
+        private readonly Manifest $manifest,
     ) {}
 
     /**
@@ -202,7 +203,7 @@ final class Gate
     /** Whether the sealed code and configuration are still intact. */
     public function integrityOk(): bool
     {
-        return $this->sealIntact();
+        return $this->sealIntact() && $this->manifest->verified();
     }
 
     /** Why the system is stopped, when it is. Null unless state is Stopped. */
@@ -232,6 +233,13 @@ final class Gate
         // state is not a licensing question, it is a tampering one, and the two
         // deserve different answers.
         if (! $this->sealIntact()) {
+            return LicenseState::Tampered;
+        }
+
+        // The Agent's own code must match the manifest the vendor signed. Unlike
+        // the seal, this cannot be reproduced on the customer's box: a self-reseal
+        // of edited Agent code yields no valid manifest, so the edit never takes.
+        if (! $this->manifest->verified()) {
             return LicenseState::Tampered;
         }
 

@@ -24,6 +24,7 @@ use Mazaya\License\Console\StatusCommand;
 use Mazaya\License\Fingerprint\Collector;
 use Mazaya\License\Guard\Gate;
 use Mazaya\License\Guard\Integrity;
+use Mazaya\License\Guard\Manifest;
 use Mazaya\License\Guard\Seal;
 use Mazaya\License\Http\Middleware\EnforceLicense;
 use Mazaya\License\Http\Middleware\HaltIfUnlicensed;
@@ -57,6 +58,13 @@ class LicenseServiceProvider extends ServiceProvider
 
         $this->app->singleton(Integrity::class, fn (): Integrity => new Integrity(dirname(__DIR__)));
 
+        $this->app->singleton(Manifest::class, fn ($app): Manifest => new Manifest(
+            $app->make(Verifier::class),
+            $app->make(Integrity::class),
+            $app->make(Config::class),
+            dirname(__DIR__),
+        ));
+
         $this->app->singleton(Seal::class, fn ($app): Seal => new Seal(
             $app->make(Config::class),
             $app->make(Integrity::class),
@@ -70,6 +78,7 @@ class LicenseServiceProvider extends ServiceProvider
             $app->make(Seal::class),
             $app->make(Cache::class),
             $app->make(Config::class),
+            $app->make(Manifest::class),
         ));
 
         $this->app->singleton(LicenseServerClient::class, fn ($app): LicenseServerClient => new LicenseServerClient(

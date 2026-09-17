@@ -53,7 +53,10 @@ cstate() { cjson | python3 -c 'import json,sys;print(json.load(sys.stdin)["state
 cstate_fresh() { cflush; cstate; }
 cfield() { cjson | python3 -c "import json,sys;print(json.load(sys.stdin).get('$1'))" 2>/dev/null || echo ERROR; }
 # faketime status → "state allows_writes allows_reads"
-cfstate(){ cfake "$1" license:status --json 2>/dev/null | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d["state"],d["allows_writes"],d["allows_reads"])' 2>/dev/null || echo "ERROR ? ?"; }
+# Flush first: otherwise a fresh (<60s real) cache entry is returned verbatim
+# instead of being recomputed under the shifted clock — the source of order-
+# dependent flakiness when this runs after suites that just warmed the cache.
+cfstate(){ cflush; cfake "$1" license:status --json 2>/dev/null | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d["state"],d["allows_writes"],d["allows_reads"])' 2>/dev/null || echo "ERROR ? ?"; }
 
 # HTTP read/write enforcement against the installed app (through FPM, so opcache matters).
 chttp()  { curl -sk -o /dev/null -w '%{http_code}' -X "${2:-GET}" -H "Host: $APP_HOST" "https://127.0.0.1$1"; }
@@ -99,6 +102,17 @@ restore_file() { local rel="${1#$CLIENT_APP/vendor/mazaya/license-client/}"; cp 
 GUARD_DIR="$CLIENT_APP/vendor/mazaya/license-client/src/Guard"
 FP_DIR="$CLIENT_APP/vendor/mazaya/license-client/src/Fingerprint"
 
+# ---- vendor-signed Agent manifest (v1.10.0) --------------------------------
+CLIENT_MANIFEST="$CLIENT_APP/vendor/mazaya/license-client/agent-manifest.mlic"
+PKG_MANIFEST="$CLIENT_PKG/agent-manifest.mlic"
+sign_manifest_for(){ sudo -u "$SERVER_USER" php "$SERVER_APP/artisan" license:sign-agent-manifest "$1" "$2" --out="$3" 2>&1; }
+manifest_restore(){ cp "$PKG_MANIFEST" "$CLIENT_MANIFEST" 2>/dev/null; chown "$CLIENT_USER:$CLIENT_USER" "$CLIENT_MANIFEST" 2>/dev/null; }
+
+# ---- host-app code (covered by strict_integrity, approve-resumable) --------
+HOSTAPP_MARKER="$CLIENT_APP/app/__SecTestMarker.php"
+hostapp_edit()  { echo "<?php // sec-test $(date +%s%N)" > "$HOSTAPP_MARKER"; chown "$CLIENT_USER:$CLIENT_USER" "$HOSTAPP_MARKER"; }
+hostapp_clean() { rm -f "$HOSTAPP_MARKER"; }
+
 # ---- bring the whole system back to a known-good baseline ------------------
 reset_clean() {
   # restore any edited covered files from the vendor source
@@ -107,11 +121,14 @@ reset_clean() {
            "$FP_DIR"/Collector.php; do
     [ -f "$f" ] && restore_file "$f"
   done
+  hostapp_clean
+  manifest_restore
   net_restore
   srv_reset_clean
   srv_unblock
   creseal
   cflush
+  settle 3          # let FPM opcache (revalidate_freq=2s) see the restored files before HTTP checks
   cbeat
   cflush
 }
