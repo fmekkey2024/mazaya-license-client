@@ -76,10 +76,13 @@ final class Integrity
                     continue;
                 }
 
-                $relative = ltrim(substr($file->getPathname(), strlen($this->root)), DIRECTORY_SEPARATOR);
-                // Hash normalised content, not raw bytes, so a Windows checkout
-                // (CRLF) matches a manifest signed on Linux (LF). Line endings
-                // are not a tamper vector; the content is.
+                // Normalise BOTH the path separator and the line endings so a
+                // Windows install matches a manifest signed on Linux: Windows
+                // builds keys like 'src\\Guard\\Gate.php' (backslash) and CRLF
+                // content, Linux 'src/Guard/Gate.php' (forward slash) and LF.
+                // Neither the separator nor the line ending is a tamper vector;
+                // the file set and the content are.
+                $relative = ltrim(str_replace('\\', '/', substr($file->getPathname(), strlen($this->root))), '/');
                 $content = preg_replace('/\r\n?/', "\n", (string) @file_get_contents($file->getPathname()));
                 $hashes[$relative] = hash('sha256', (string) $content);
             }

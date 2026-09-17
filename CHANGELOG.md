@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.11.6] - 2026-09-17
+
+### Fixed
+
+- **Windows path separators broke manifest matching.** `Guard\Integrity::fileHashes()`
+  built its keys from the OS path separator, so a Windows install produced
+  `src\Guard\Gate.php` while a manifest signed on Linux held `src/Guard/Gate.php`.
+  The two file-hash maps therefore never matched: the files-digest differed, the
+  server found no manifest to return, and the install stayed tampered (heartbeat
+  showing "expires 1970"). The relative path is now normalised to forward slashes
+  on every platform, so a Windows install computes the same digest — and verifies
+  the same manifest — as the Linux build that signed it. (Line endings were
+  already normalised in 1.11.3; this is the separator, the other half.)
+
 ## [1.11.5] - 2026-09-17
 
 ### Fixed
