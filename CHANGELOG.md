@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.8.0] - 2026-09-17
+
+### Added
+
+- **Honour an explicit vendor stop immediately** (`LICENSE_HONOR_SERVER_STOP`, on
+  by default). A `suspended`, `revoked` or `expired` verdict from the licence
+  server now locks the installation at the very next heartbeat, instead of
+  letting the current signed token run out its remaining life. It stays locked
+  until a heartbeat returns an active licence, so the lock is cleared only from
+  the vendor's panel. An unreachable server never triggers it — survival through
+  a network outage is unchanged.
+- New `stopped` state. Unlike `expired` (derived from the token's own clock) it
+  is a live vendor decision, and it is a **hard** stop: reads are refused too,
+  not just writes, regardless of the enforcement mode.
+
+
 ## [1.7.0] - 2026-09-13
 
 ### Added

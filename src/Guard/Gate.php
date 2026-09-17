@@ -75,9 +75,11 @@ final class Gate
      */
     public function allowsReads(): bool
     {
-        // There is no honest reading of an edited configuration, so tampering
-        // is the one state the read-only concession does not extend to.
-        if ($this->state() === LicenseState::Tampered) {
+        // Two states are a hard stop that the read-only concession never
+        // extends to: an edited configuration (Tampered), and an explicit
+        // vendor stop (Stopped). Both mean "nothing runs until this is put
+        // right", so even reads are refused regardless of enforcement mode.
+        if (in_array($this->state(), [LicenseState::Tampered, LicenseState::Stopped], true)) {
             return false;
         }
 
@@ -212,6 +214,27 @@ final class Gate
         // deserve different answers.
         if (! $this->sealIntact()) {
             return LicenseState::Tampered;
+        }
+
+        // An explicit stop the vendor issued, honoured the instant it was heard.
+        //
+        // A suspension or revocation stops new tokens being signed but leaves
+        // the current one cryptographically valid for the rest of its life. By
+        // default that means the system keeps running for days after the
+        // vendor pressed the button. When the vendor's policy is a hard stop,
+        // the last verdict the server actually returned is honoured here — so
+        // the system locks at the next heartbeat and stays locked until a
+        // heartbeat brings back an active licence.
+        //
+        // Only an explicitly received negative verdict locks; an unreachable
+        // server never does, which is what preserves survival through an
+        // outage. That distinction is the whole point.
+        if ($this->config->get('license.honor_server_stop', true)) {
+            $verdict = $this->store->lastStatus();
+
+            if (in_array($verdict, ['suspended', 'revoked', 'blocked', 'expired', 'activation_limit'], true)) {
+                return LicenseState::Stopped;
+            }
         }
 
         try {

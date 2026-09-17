@@ -36,6 +36,18 @@ enum LicenseState: string
      */
     case Tampered = 'tampered';
 
+    /**
+     * The licence server explicitly told this installation to stop —
+     * suspended, revoked, blocked, or expired — on its last heartbeat.
+     *
+     * Distinct from Expired, which is derived from the token's own clock: this
+     * is a live decision the vendor made, honoured the moment it was heard
+     * rather than waiting for the current token to lapse. It stays until a
+     * heartbeat brings back an active licence, so the vendor's panel is what
+     * clears it.
+     */
+    case Stopped = 'stopped';
+
     public function isUsable(): bool
     {
         return in_array($this, [self::Active, self::Expiring, self::Grace], true);
@@ -66,6 +78,7 @@ enum LicenseState: string
             self::Unlicensed => 'This system has not been activated',
             self::Invalid    => 'This system\'s license could not be verified',
             self::Tampered   => 'This system\'s licensing configuration has been altered',
+            self::Stopped    => 'This system has been stopped by your vendor',
         };
     }
 }

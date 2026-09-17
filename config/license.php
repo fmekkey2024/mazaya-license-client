@@ -102,6 +102,19 @@ return [
 
     /*
     |---------------------------------------------------------------------------
+    | Honour an explicit vendor stop immediately
+    |---------------------------------------------------------------------------
+    | When on, a suspended / revoked / expired verdict from the licence server
+    | locks the installation at the very next heartbeat, instead of letting the
+    | current signed token run out its remaining life. The lock holds until a
+    | heartbeat returns an active licence — so it is cleared only from the
+    | vendor's panel. An unreachable server never triggers this, so survival
+    | through a network outage is unaffected.
+    */
+    'honor_server_stop' => env('LICENSE_HONOR_SERVER_STOP', true),
+
+    /*
+    |---------------------------------------------------------------------------
     | Show the notice automatically
     |---------------------------------------------------------------------------
     | Places the licence banner at the top of the application's own pages, so
