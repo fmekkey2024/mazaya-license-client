@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.11.1] - 2026-09-17
+
+### Changed
+
+- **A live SSE connection now counts as reachability for the offline leash.**
+  With the listener connected, the leash stays satisfied without frequent
+  heartbeats, so the default check-in is relaxed to 6 hours. A genuinely offline
+  install (SSE dropped *and* heartbeats failing) still force-stops within
+  `max_offline_hours`. An install NOT running the listener automatically beats an
+  hour before the leash would trip, so it stays safe without instant updates.
+
+
 ## [1.11.0] - 2026-09-17
 
 ### Added

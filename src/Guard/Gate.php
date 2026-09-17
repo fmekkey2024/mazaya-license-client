@@ -277,9 +277,15 @@ final class Gate
         $maxOffline = (int) $this->config->get('license.max_offline_hours', 4);
 
         if ($maxOffline > 0) {
-            $last = $this->store->lastHeartbeatAt();
+            // A live SSE connection counts as reachability, exactly like a
+            // heartbeat: whichever happened most recently is "last contact".
+            $last        = $this->store->lastHeartbeatAt();
+            $lastContact = max(
+                $last !== null ? (int) strtotime($last) : 0,
+                (int) ($this->store->lastSseAt() ?? 0),
+            );
 
-            if ($last !== null && strtotime($last) < time() - ($maxOffline * 3600)) {
+            if ($lastContact > 0 && $lastContact < time() - ($maxOffline * 3600)) {
                 $this->stopReason = 'offline';
 
                 return LicenseState::Stopped;

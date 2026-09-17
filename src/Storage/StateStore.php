@@ -214,6 +214,36 @@ final class StateStore
         return dirname($this->path).'/mercure.json';
     }
 
+    /**
+     * Proof the licence server is reachable right now, recorded by the SSE
+     * listener on any hub activity. The offline leash treats this the same as a
+     * heartbeat, so a live instant-update connection keeps an installation alive
+     * without frequent polling — and losing it (a blocked network) still trips
+     * the leash on schedule.
+     */
+    public function touchSse(): void
+    {
+        @mkdir(dirname($this->path), 0750, true);
+        @file_put_contents($this->ssePath(), (string) time());
+        @chmod($this->ssePath(), 0600);
+    }
+
+    public function lastSseAt(): ?int
+    {
+        if (! is_file($this->ssePath())) {
+            return null;
+        }
+
+        $t = (int) @file_get_contents($this->ssePath());
+
+        return $t > 0 ? $t : null;
+    }
+
+    private function ssePath(): string
+    {
+        return dirname($this->path).'/sse_contact';
+    }
+
     private function put(array $attributes): void
     {
         $this->cachedRow = null;

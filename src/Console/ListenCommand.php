@@ -31,8 +31,13 @@ class ListenCommand extends Command
 
     private float $lastBeat = 0.0;
 
+    private float $lastTouch = 0.0;
+
+    private ?StateStore $store = null;
+
     public function handle(StateStore $store): int
     {
+        $this->store = $store;
         if (config('license.mode') !== 'onprem') {
             $this->info('Not an on-prem installation; nothing to listen for.');
 
@@ -82,6 +87,7 @@ class ListenCommand extends Command
             CURLOPT_CONNECTTIMEOUT => 10,
             CURLOPT_RETURNTRANSFER => false,
             CURLOPT_WRITEFUNCTION  => function ($ch, string $chunk) use (&$buffer): int {
+                $this->touch();   // any hub activity (event or keep-alive) proves reachability
                 $buffer .= $chunk;
 
                 while (($nl = strpos($buffer, "\n")) !== false) {
@@ -106,6 +112,17 @@ class ListenCommand extends Command
         }
 
         curl_close($ch);
+    }
+
+    /** Record reachability for the offline leash, at most once a minute. */
+    private function touch(): void
+    {
+        $now = microtime(true);
+        if ($now - $this->lastTouch < 60.0) {
+            return;
+        }
+        $this->lastTouch = $now;
+        $this->store?->touchSse();
     }
 
     private function onWake(): void

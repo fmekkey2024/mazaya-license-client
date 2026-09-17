@@ -131,7 +131,34 @@ final class LicenseManager
 
     public function isCheckInDue(): bool
     {
-        return $this->secondsUntilCheckIn() <= 0;
+        if ($this->secondsUntilCheckIn() <= 0) {
+            return true;
+        }
+
+        // Safety net: with a long heartbeat interval, an installation NOT running
+        // the SSE listener would otherwise let the offline leash trip between
+        // beats. If the instant channel is not keeping us fresh, force a beat an
+        // hour before the leash would fire. An install running the listener never
+        // reaches this.
+        $leash = (int) $this->config->get('license.max_offline_hours', 4) * 3600;
+
+        if ($leash > 0 && ! $this->sseFresh()) {
+            $last = $this->store->lastHeartbeatAt();
+            $lastTs = $last !== null ? (int) strtotime($last) : 0;
+
+            if ($lastTs > 0 && (time() - $lastTs) >= ($leash - 3600)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function sseFresh(): bool
+    {
+        $sse = $this->store->lastSseAt();
+
+        return $sse !== null && (time() - $sse) < 300;
     }
 
     /** The last word from the licence server: active, suspended, revoked, expired. */
