@@ -1,0 +1,6 @@
+# Keep dev-only trees out of the distributed artifact (git-archive honours these).
+# The security suite in particular is an adversary's roadmap — never ship it.
+tests/          export-ignore
+.github/        export-ignore
+.gitattributes  export-ignore
+.gitignore      export-ignore
