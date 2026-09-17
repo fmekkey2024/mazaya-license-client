@@ -171,6 +171,7 @@ final class LicenseManager
         $this->store->sealWith($this->seal->compute($response['install_id'], $response['license_secret']));
 
         $this->applyToken($response['license']);
+        $this->store->storeMercure($response['mercure'] ?? null);
         $this->store->recordHeartbeat($response['status'] ?? 'active', $response['message'] ?? null);
         $this->gate->flush();
 
@@ -220,6 +221,8 @@ final class LicenseManager
         }
 
         $this->recordVerdict($response);
+
+        $this->store->storeMercure($response['mercure'] ?? null);
 
         // The vendor approved the current code from the panel: adopt it as the
         // new sealed baseline so an edit they have accepted stops tripping the

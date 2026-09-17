@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.11.0] - 2026-09-17
+
+### Added
+
+- **Instant updates over SSE (Mercure).** A panel decision -- suspend, revoke,
+  approve, renew -- reaches an installation in seconds instead of at the next
+  poll. The server pushes a "wake" to the installation's topic on the Mercure
+  hub; the new `license:listen` daemon receives it and runs an ordinary heartbeat.
+- The wake is only a nudge: the real, signed verdict still comes from the
+  heartbeat it triggers, so the channel needs no trust -- a forged wake merely
+  causes a harmless heartbeat. If the hub is unreachable the scheduled heartbeat
+  is the unchanged backstop, so this is pure latency, never a dependency.
+- `license:listen` -- the long-running daemon (run under systemd/supervisor).
+- `license:install-listener` -- installs its systemd unit (root), or prints it.
+  `license:activate` now sets it up too, best-effort, alongside the scheduler.
+- The client stores the hub URL and a subscribe-only token from the heartbeat/
+  activation response automatically; nothing to configure.
+
+
 ## [1.10.1] - 2026-09-17
 
 ### Added

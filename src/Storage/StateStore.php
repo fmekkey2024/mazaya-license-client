@@ -179,6 +179,41 @@ final class StateStore
     // ---------------------------------------------------------------- internals
 
     /** Writes both copies. A failure on either side must not take the app down. */
+    /**
+     * The Mercure hub details for instant push, as the server last returned
+     * them. Kept in a file beside the licence (not sealed, not sensitive: the
+     * token only permits subscribing to this install's own topic).
+     *
+     * @param array<string,mixed>|null $cfg
+     */
+    public function storeMercure(?array $cfg): void
+    {
+        if (! is_array($cfg) || $cfg === []) {
+            return; // a response without mercure must not wipe a good config
+        }
+
+        @mkdir(dirname($this->path), 0750, true);
+        @file_put_contents($this->mercurePath(), json_encode($cfg));
+        @chmod($this->mercurePath(), 0600);
+    }
+
+    /** @return array<string,mixed>|null */
+    public function mercureConfig(): ?array
+    {
+        if (! is_file($this->mercurePath())) {
+            return null;
+        }
+
+        $data = json_decode((string) @file_get_contents($this->mercurePath()), true);
+
+        return is_array($data) && $data !== [] ? $data : null;
+    }
+
+    private function mercurePath(): string
+    {
+        return dirname($this->path).'/mercure.json';
+    }
+
     private function put(array $attributes): void
     {
         $this->cachedRow = null;

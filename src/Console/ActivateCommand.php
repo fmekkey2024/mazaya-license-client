@@ -50,6 +50,13 @@ class ActivateCommand extends Command
             $this->line('renews the licence on its own -- any request does it.');
         }
 
+
+        $this->newLine();
+        $this->line('Setting up instant updates (optional)...');
+        // Best-effort and non-fatal: instant push is a nice-to-have on top of
+        // the heartbeat. Needs root to install the service; prints how otherwise.
+        $this->call('license:install-listener');
+
         return self::SUCCESS;
     }
 }

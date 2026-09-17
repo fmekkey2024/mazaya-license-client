@@ -16,8 +16,10 @@ use Illuminate\Support\ServiceProvider;
 use Mazaya\License\Console\ActivateCommand;
 use Mazaya\License\Console\DoctorCommand;
 use Mazaya\License\Console\HeartbeatCommand;
+use Mazaya\License\Console\ListenCommand;
 use Mazaya\License\Console\OfflineApplyCommand;
 use Mazaya\License\Console\InstallSchedulerCommand;
+use Mazaya\License\Console\InstallListenerCommand;
 use Mazaya\License\Console\OfflineRequestCommand;
 use Mazaya\License\Console\ResealCommand;
 use Mazaya\License\Console\StatusCommand;
@@ -112,11 +114,13 @@ class LicenseServiceProvider extends ServiceProvider
             $this->commands([
                 ActivateCommand::class,
                 HeartbeatCommand::class,
+                ListenCommand::class,
                 StatusCommand::class,
                 OfflineRequestCommand::class,
                 OfflineApplyCommand::class,
                 ResealCommand::class,
                 InstallSchedulerCommand::class,
+                InstallListenerCommand::class,
                 DoctorCommand::class,
             ]);
 
