@@ -1,0 +1,39 @@
+# Security gate — the licence Agent is a security protocol, so a red suite
+# blocks the build. Runs the adversarial matrix + contract tests against a real
+# installation.
+#
+# It needs a runner that can reach a test install (root, faketime, mysql, the
+# app users). Use a SELF-HOSTED runner on the moodle host — labelled
+# `licensing-test-env` — or a job that provisions a throwaway install first.
+# A stock GitHub-hosted runner has none of that and will (correctly) fail.
+name: security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+jobs:
+  gate:
+    runs-on: [self-hosted, licensing-test-env]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run the security gate
+        run: sudo bash tests/security/run.sh
+
+  # After a green gate on the source build, the release job encodes the Agent
+  # (ionCube), installs the ENCODED build on a clean server, and runs the same
+  # gate again — encoding can change loading/reflection, so it must re-pass.
+  # Wire this up when ionCube lands; kept here so the pipeline shape is explicit.
+  #
+  # release:
+  #   needs: gate
+  #   runs-on: [self-hosted, licensing-test-env]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - run: bash build/encode.sh                 # ionCube-encode the Guard
+  #     - run: bash build/install-encoded.sh test   # onto a clean server
+  #     - run: CLIENT_APP=/var/www/lic-encoded sudo bash tests/security/run.sh
+  #     - run: bash build/release.sh
