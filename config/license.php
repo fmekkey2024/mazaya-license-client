@@ -69,7 +69,7 @@ return [
     | Heartbeat
     |---------------------------------------------------------------------------
     */
-    'heartbeat_hours' => (int) env('LICENSE_HEARTBEAT_HOURS', 6),
+    'heartbeat_hours' => (int) env('LICENSE_HEARTBEAT_HOURS', 1),
 
     /*
     |---------------------------------------------------------------------------
@@ -112,6 +112,29 @@ return [
     | through a network outage is unaffected.
     */
     'honor_server_stop' => env('LICENSE_HONOR_SERVER_STOP', true),
+
+    /*
+    |---------------------------------------------------------------------------
+    | Heartbeat leash
+    |---------------------------------------------------------------------------
+    | The system must confirm its licence with the server within this many hours
+    | or it hard-stops until a fresh heartbeat gets through. This trades the
+    | survive-a-long-outage property for a short leash: a copy taken off-network,
+    | or a box firewalled away from us, cannot keep running on its token.
+    | Set to 0 to disable the leash and fall back to token-lifetime survival.
+    */
+    'max_offline_hours' => (int) env('LICENSE_MAX_OFFLINE_HOURS', 4),
+
+    /*
+    |---------------------------------------------------------------------------
+    | Strict hardware binding
+    |---------------------------------------------------------------------------
+    | When on (the default), every hardware component the licence was bound to
+    | must still match, so any change of hardware — a copy onto another server
+    | — stops the install. A legitimate change is re-authorised from the panel.
+    | Turn off to fall back to the fuzzy fingerprint_threshold below.
+    */
+    'fingerprint_strict' => (bool) env('LICENSE_FP_STRICT', true),
 
     /*
     |---------------------------------------------------------------------------

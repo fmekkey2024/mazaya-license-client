@@ -78,6 +78,18 @@ final class LicenseManager
         return $this->gate->payload();
     }
 
+    /**
+     * Why the system is stopped, when it is: 'vendor' (the panel suspended,
+     * revoked or expired it), 'offline' (no heartbeat has reached the server
+     * inside the offline leash), or null when nothing is forcing a stop. It
+     * lets the block page tell the customer whether to call the vendor or to
+     * check their own network, rather than showing one blank wall for both.
+     */
+    public function stopReason(): ?string
+    {
+        return $this->gate->stopReason();
+    }
+
     public function installId(): ?string
     {
         return $this->store->installId();
@@ -189,10 +201,12 @@ final class LicenseManager
                 'license_file_ok' => ! $this->store->integritySuspect(),
                 'clock_ok'        => ! $this->clock->rolledBack(),
 
-                // The host application's routes and bootstrap are reported, not
-                // sealed: they change with every release of the product, and
-                // sealing them would mean a forgotten reseal after a deploy
-                // takes a paying customer down. A change shows on the dashboard.
+                // Whether the sealed code and configuration are intact. A false
+                // here is an edited file — the server auto-suspends on it, so
+                // the stop is registered centrally and cleared only from the
+                // panel, not silently by reverting the edit.
+                'code_ok'         => $this->gate->integrityOk(),
+
                 'host_files'      => $this->integrity->hostFiles(base_path()),
             ],
         ]);
@@ -206,6 +220,16 @@ final class LicenseManager
         }
 
         $this->recordVerdict($response);
+
+        // The vendor approved the current code from the panel: adopt it as the
+        // new sealed baseline so an edit they have accepted stops tripping the
+        // integrity check. The server keeps sending this directive until the
+        // client confirms code_ok=true, so a dropped heartbeat cannot strand
+        // an installation the vendor already cleared.
+        if (! empty($response['reseal'])) {
+            $this->reseal();
+        }
+
         $this->gate->flush();
 
         return $response;

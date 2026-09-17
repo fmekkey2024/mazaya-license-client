@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.9.0] - 2026-09-17
+
+### Added
+
+- **Strict hardware binding** (`LICENSE_FP_STRICT`, on by default). A heartbeat
+  from hardware the installation was not activated on is refused and the panel
+  flags it as a possible copy. Any change of the bound hardware stops the
+  install -- which is exactly what a copy onto a second server looks like. A
+  genuine migration is re-authorised from the panel.
+- **Offline leash** (`LICENSE_MAX_OFFLINE_HOURS`, default 4). Once no heartbeat
+  has reached the licence server inside the window, the installation force-stops
+  (`stopped`, reason `offline`) and stays stopped until a heartbeat succeeds and
+  confirms the licence is valid. An unreachable server within the window is
+  still survived; past it, it is not.
+- **Reseal on the vendor's approval.** When the panel approves code it flagged
+  as modified, the next heartbeat adopts the current code as the sealed baseline
+  and the installation resumes -- no manual `license:reseal` needed.
+- `License::stopReason()` distinguishes a vendor stop from an offline stop for
+  the block page.
+
+### Changed
+
+- Heartbeat cadence is driven by the licence server's `check_in`; the scheduled
+  beat runs every minute and reports when due. The server can ask for a beat as
+  often as every two minutes, so a vendor decision or a reported code edit takes
+  effect within about that time.
+
+
 ## [1.8.0] - 2026-09-17
 
 ### Added

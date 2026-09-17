@@ -30,6 +30,9 @@ final class Gate
 
     private ?array $payload = null;
 
+    /** Why the system is stopped, when it is: 'vendor' | 'offline' | null. */
+    private ?string $stopReason = null;
+
     public function __construct(
         private readonly StateStore $store,
         private readonly Verifier $verifier,
@@ -196,8 +199,24 @@ final class Gate
         return (int) $this->config->get('license.clock_tolerance', 3600);
     }
 
+    /** Whether the sealed code and configuration are still intact. */
+    public function integrityOk(): bool
+    {
+        return $this->sealIntact();
+    }
+
+    /** Why the system is stopped, when it is. Null unless state is Stopped. */
+    public function stopReason(): ?string
+    {
+        $this->hydrate();
+
+        return $this->stopReason;
+    }
+
     private function decide(): LicenseState
     {
+        $this->stopReason = null;
+
         $token = $this->store->token();
 
         if ($token === null) {
@@ -233,6 +252,28 @@ final class Gate
             $verdict = $this->store->lastStatus();
 
             if (in_array($verdict, ['suspended', 'revoked', 'blocked', 'expired', 'activation_limit'], true)) {
+                $this->stopReason = 'vendor';
+
+                return LicenseState::Stopped;
+            }
+        }
+
+        // The heartbeat leash.
+        //
+        // The system must have confirmed its licence with the server within the
+        // last few hours or it stops — a hard stop, cleared only by a fresh
+        // successful heartbeat once the network is back. This deliberately gives
+        // up the survive-a-long-outage property in exchange for a short leash:
+        // a copy taken off-network, or a box quietly firewalled away from us,
+        // cannot keep running for the life of its token.
+        $maxOffline = (int) $this->config->get('license.max_offline_hours', 4);
+
+        if ($maxOffline > 0) {
+            $last = $this->store->lastHeartbeatAt();
+
+            if ($last !== null && strtotime($last) < time() - ($maxOffline * 3600)) {
+                $this->stopReason = 'offline';
+
                 return LicenseState::Stopped;
             }
         }
@@ -311,16 +352,26 @@ final class Gate
             return true; // nothing was bound, nothing to check
         }
 
-        $current   = $this->fingerprints->collect();
-        $threshold = (int) $this->config->get('license.fingerprint_threshold', 3);
-        $matches   = 0;
+        $current  = $this->fingerprints->collect();
+        $present  = array_filter($signed, static fn ($v): bool => $v !== '');
+        $matches  = 0;
 
-        foreach ($signed as $component => $value) {
-            if ($value !== '' && isset($current[$component]) && hash_equals((string) $value, $current[$component])) {
+        foreach ($present as $component => $value) {
+            if (isset($current[$component]) && hash_equals((string) $value, $current[$component])) {
                 $matches++;
             }
         }
 
-        return $matches >= min($threshold, count(array_filter($signed)));
+        // Strict binding (the default now): every component the token carries
+        // must still match, so any change of hardware — which is exactly what a
+        // copy onto a second server looks like — stops the install. A legitimate
+        // hardware change is re-authorised from the panel (reset fingerprint).
+        if ($this->config->get('license.fingerprint_strict', true)) {
+            return $matches === count($present);
+        }
+
+        $threshold = (int) $this->config->get('license.fingerprint_threshold', 3);
+
+        return $matches >= min($threshold, count($present));
     }
 }
