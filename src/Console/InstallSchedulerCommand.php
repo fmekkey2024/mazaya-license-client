@@ -27,6 +27,16 @@ class InstallSchedulerCommand extends Command
         $user = $this->option('user') ?: $this->appUser();
         $line = "* * * * * {$user} cd {$path} && {$php} artisan schedule:run >> /dev/null 2>&1";
 
+        if (stripos(PHP_OS, 'WIN') === 0) {
+            $this->line('On Windows, register a scheduled task that runs the scheduler every minute');
+            $this->line('(in an elevated Command Prompt):');
+            $this->newLine();
+            $this->line('  schtasks /create /tn MazayaLicenseScheduler /sc minute /mo 1 /rl highest /f \\');
+            $this->line('    /tr "\"'.$php.'\" \"'.$path.'\\artisan\" schedule:run"');
+
+            return self::SUCCESS;
+        }
+
         if ($this->option('print')) {
             $this->line($line);
 

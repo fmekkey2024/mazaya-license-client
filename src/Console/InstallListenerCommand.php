@@ -46,6 +46,19 @@ class InstallListenerCommand extends Command
         UNIT;
         $unit = preg_replace('/^        /m', '', $unit)."\n";
 
+        if (stripos(PHP_OS, 'WIN') === 0) {
+            $this->line('On Windows, run the listener as a service with NSSM (https://nssm.cc):');
+            $this->newLine();
+            $this->line('  nssm install MazayaLicenseListener "'.$php.'" "'.$path.'\\artisan" license:listen');
+            $this->line('  nssm set MazayaLicenseListener AppDirectory "'.$path.'"');
+            $this->line('  nssm start MazayaLicenseListener');
+            $this->newLine();
+            $this->line('Or a Task Scheduler task "At startup" running the same command. Optional —');
+            $this->line('the scheduled heartbeat already keeps the licence current without it.');
+
+            return self::SUCCESS;
+        }
+
         if ($this->option('print')) {
             $this->line($unit);
 

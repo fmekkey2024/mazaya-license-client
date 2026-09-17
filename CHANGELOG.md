@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.11.3] - 2026-09-17
+
+### Fixed
+
+- **Cross-platform manifest hashing.** The Agent manifest now hashes line-ending-
+  normalised content, so a Windows checkout (CRLF) verifies against a manifest
+  signed on Linux (LF) instead of reading as tampered.
+
+### Changed
+
+- `license:install-scheduler` and `license:install-listener` print Windows
+  instructions (schtasks / NSSM) when run on Windows, instead of cron/systemd.
+
+
 ## [1.11.2] - 2026-09-17
 
 ### Fixed

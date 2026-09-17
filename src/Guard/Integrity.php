@@ -77,7 +77,11 @@ final class Integrity
                 }
 
                 $relative = ltrim(substr($file->getPathname(), strlen($this->root)), DIRECTORY_SEPARATOR);
-                $hashes[$relative] = hash_file('sha256', $file->getPathname());
+                // Hash normalised content, not raw bytes, so a Windows checkout
+                // (CRLF) matches a manifest signed on Linux (LF). Line endings
+                // are not a tamper vector; the content is.
+                $content = preg_replace('/\r\n?/', "\n", (string) @file_get_contents($file->getPathname()));
+                $hashes[$relative] = hash('sha256', (string) $content);
             }
         } catch (Throwable) {
             return ['__unreadable__' => '1'];
