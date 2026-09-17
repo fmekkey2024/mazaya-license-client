@@ -47,6 +47,37 @@ final class Manifest
     }
 
     /**
+     * Persist a vendor-signed manifest the server handed back (fetch-at-
+     * activation), next to the package code it vouches for — exactly where
+     * verified() reads it. Best-effort: a read-only package dir just means the
+     * install keeps reading as tampered until a manifest is placed another way,
+     * which is the safe direction to fail. Never writes an unverifiable blob.
+     */
+    public function store(string $signed): bool
+    {
+        $signed = trim($signed);
+
+        if ($signed === '') {
+            return false;
+        }
+
+        try {
+            $this->verifier->verify($signed); // refuse to persist a blob we cannot verify
+        } catch (Throwable) {
+            return false;
+        }
+
+        $file = $this->path();
+
+        // Nothing to do if what is already on disk is byte-identical.
+        if (is_file($file) && trim((string) @file_get_contents($file)) === $signed) {
+            return true;
+        }
+
+        return @file_put_contents($file, $signed."\n") !== false;
+    }
+
+    /**
      * True iff a vendor-signed manifest for this product covers the Agent code
      * on disk exactly — every file present, every hash matching, nothing added.
      */

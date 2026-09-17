@@ -9,6 +9,7 @@ use Mazaya\License\Enums\LicenseState;
 use Mazaya\License\Fingerprint\Collector;
 use Mazaya\License\Guard\Gate;
 use Mazaya\License\Guard\Integrity;
+use Mazaya\License\Guard\Manifest;
 use Mazaya\License\Guard\Seal;
 use Mazaya\License\Storage\ClockGuard;
 use Mazaya\License\Storage\StateStore;
@@ -33,6 +34,7 @@ final class LicenseManager
         private readonly ClockGuard $clock,
         private readonly LicenseServerClient $client,
         private readonly Config $config,
+        private readonly Manifest $manifest,
     ) {}
 
     // ------------------------------------------------------------------ state
@@ -181,6 +183,8 @@ final class LicenseManager
     /** First contact. Exchanges the customer's license key for an install identity. */
     public function activate(string $licenseKey, array $context = []): array
     {
+        $context['agent_digest'] = $this->integrity->filesDigest();
+
         $response = $this->client->activate($licenseKey, $this->fingerprints->collect(), $context);
 
         if (($response['http_status'] ?? 500) >= 400) {
@@ -199,6 +203,13 @@ final class LicenseManager
 
         $this->applyToken($response['license']);
         $this->store->storeMercure($response['mercure'] ?? null);
+
+        // Fetch-at-activation: adopt the vendor-signed manifest for the code we
+        // just reported, so a plain `composer` install is not born tampered.
+        if (! empty($response['manifest'])) {
+            $this->manifest->store((string) $response['manifest']);
+        }
+
         $this->store->recordHeartbeat($response['status'] ?? 'active', $response['message'] ?? null);
         $this->gate->flush();
 
@@ -236,6 +247,10 @@ final class LicenseManager
                 'code_ok'         => $this->gate->integrityOk(),
 
                 'host_files'      => $this->integrity->hostFiles(base_path()),
+
+                // The address of this Agent version's vendor-signed manifest, so
+                // the server can hand it back when we do not already have it.
+                'agent_digest'    => $this->integrity->filesDigest(),
             ],
         ]);
 
@@ -250,6 +265,13 @@ final class LicenseManager
         $this->recordVerdict($response);
 
         $this->store->storeMercure($response['mercure'] ?? null);
+
+        // Fetch-at-activation: if the server returned the vendor-signed manifest
+        // for the exact code we reported, adopt it. This is how a plain
+        // `composer` install (no baked artifact) stops reading as tampered.
+        if (! empty($response['manifest'])) {
+            $this->manifest->store((string) $response['manifest']);
+        }
 
         // The vendor approved the current code from the panel: adopt it as the
         // new sealed baseline so an edit they have accepted stops tripping the

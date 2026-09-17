@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.11.4] - 2026-09-17
+
+### Added
+
+- **Fetch-at-activation for the vendor manifest.** The Agent now reports a digest
+  of its own package files on activation and on every heartbeat, and the server
+  returns the pre-signed manifest matching that exact code. A plain
+  `composer require`/`composer update` install (which never carries the gitignored
+  `agent-manifest.mlic`) now picks the manifest up automatically on its first
+  heartbeat, instead of reading as tampered forever. No baked per-product
+  artifact needed. The server only ever returns a manifest it signed itself for
+  those exact file hashes — it never signs a digest the client proposes, so
+  edited code still cannot obtain a manifest that vouches for it.
+
+### Fixed
+
+- On the first heartbeat right after a `composer update`, the install still
+  reports the previous (now-stale) integrity result before it can store the new
+  manifest. The server no longer auto-suspends in that window: a digest that
+  matches a pre-approved manifest is proof the code is authentic even when the
+  file is not yet on disk.
+
 ## [1.11.3] - 2026-09-17
 
 ### Fixed

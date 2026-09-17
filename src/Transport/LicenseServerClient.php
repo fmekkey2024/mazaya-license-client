@@ -36,6 +36,7 @@ final class LicenseServerClient
             'php_version' => PHP_VERSION,
             'hostname'    => gethostname() ?: null,
             'label'       => $context['label'] ?? null,
+            'agent_digest' => $context['agent_digest'] ?? null,
         ], static fn ($value): bool => $value !== null));
 
         return $this->decode($response);

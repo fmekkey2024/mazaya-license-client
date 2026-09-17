@@ -94,6 +94,19 @@ final class Integrity
     }
 
     /**
+     * A single digest over {@see fileHashes()} — the address under which the
+     * server keeps this Agent version's vendor-signed manifest. Presented on
+     * activation and heartbeat so a plain `composer` install can fetch the
+     * matching manifest instead of needing it baked into a per-product artifact.
+     *
+     * Must stay byte-identical to the server's SignAgentManifest digest.
+     */
+    public function filesDigest(): string
+    {
+        return hash('sha256', json_encode($this->fileHashes(), JSON_THROW_ON_ERROR));
+    }
+
+    /**
      * A digest of the host application's own source code.
      *
      * Only meaningful when strict mode is on. It covers every PHP, Blade and

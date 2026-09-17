@@ -98,6 +98,7 @@ class LicenseServiceProvider extends ServiceProvider
             $app->make(ClockGuard::class),
             $app->make(LicenseServerClient::class),
             $app->make(Config::class),
+            $app->make(Manifest::class),
         ));
     }
 
