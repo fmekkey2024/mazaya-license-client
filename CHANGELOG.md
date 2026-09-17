@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.11.5] - 2026-09-17
+
+### Fixed
+
+- **Host-app / config tamper is auto-suspended again.** v1.11.4 let the server
+  skip auto-suspend whenever the Agent's own code matched a pre-approved manifest
+  — but that also masked a broken *seal* (an edited host-app file under
+  strict_integrity, or an edited sealed `.env` value), where the Agent code is
+  untouched yet the installation is genuinely tampered. The Agent now reports the
+  seal and the manifest as two separate signals, so the server auto-suspends on a
+  broken seal while still not suspending a fresh `composer` install whose
+  (authentic) manifest merely has not been fetched yet.
+
 ## [1.11.4] - 2026-09-17
 
 ### Added

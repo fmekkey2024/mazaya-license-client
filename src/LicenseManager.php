@@ -246,6 +246,12 @@ final class LicenseManager
                 // panel, not silently by reverting the edit.
                 'code_ok'         => $this->gate->integrityOk(),
 
+                // Reported separately so the server can distinguish a genuine
+                // tamper (broken seal: edited config or host app) from a manifest
+                // that just needs fetching (authentic Agent code, not yet stored).
+                'seal_ok'         => $this->gate->sealOk(),
+                'manifest_ok'     => $this->gate->manifestOk(),
+
                 'host_files'      => $this->integrity->hostFiles(base_path()),
 
                 // The address of this Agent version's vendor-signed manifest, so

@@ -206,6 +206,26 @@ final class Gate
         return $this->sealIntact() && $this->manifest->verified();
     }
 
+    /**
+     * The two integrity components, reported separately on the heartbeat.
+     *
+     * The server needs to tell a real tamper apart from a manifest that merely
+     * has to be fetched. A broken SEAL means the configuration or the host app
+     * was edited — a genuine tamper the vendor must approve. A failed MANIFEST,
+     * on the other hand, can simply mean a plain `composer` install has not
+     * stored its (authentic) manifest yet; the server confirms that against the
+     * digest and does not auto-suspend authentic code for it.
+     */
+    public function sealOk(): bool
+    {
+        return $this->sealIntact();
+    }
+
+    public function manifestOk(): bool
+    {
+        return $this->manifest->verified();
+    }
+
     /** Why the system is stopped, when it is. Null unless state is Stopped. */
     public function stopReason(): ?string
     {
